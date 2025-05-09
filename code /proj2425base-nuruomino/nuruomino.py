@@ -12,9 +12,9 @@ from search import Problem, Node  # Import the classes from search.py
 #struct Cell
 class Cell:
     def __init__(self, regionValue:int, row:int, col:int):
-        self.regionValue = regionValue
-        self.row = row
-        self.col = col
+        self.regionValue = regionValue #region which the cell belongs
+        self.row = row #cell's row (x-coordinate)
+        self.col = col #cell's column (y-coordinate)
         self.flagOccupied = False #true if the cell is occupied
         self.shape = ""  #shape contained in the cell
     
@@ -23,29 +23,31 @@ class Cell:
 
     def getCol(self) -> int:
         return self.col
+    
+    def getRegionCell(self) -> int:
+        return self.regionValue
         
     def occupyCell(self) -> None:
         self.flagOccupied = True
         
     def putShapeCell(self, shape:str) -> None:
         self.shape = shape
-    
-    def getRegionCell(self) -> int:
-        return self.regionValue
 
+#struct Region
 class Region:
     def __init__(self, value:int, cells:list):
-        self.value = value
-        self.cells = cells
-        
-    def addCell(self, newCell:Cell) -> None:
-        self.cells.append(newCell)
+        self.value = value #region value
+        self.cells = cells #list of cells inside of the region
         
     def getValue(self) -> int:
         return self.value
     
     def getCells(self) -> list:
         return self.cells
+     
+    #adds a new cell to the region   
+    def addCell(self, newCell:Cell) -> None:
+        self.cells.append(newCell) 
     
 
 class NuruominoState:
@@ -65,51 +67,59 @@ class Board:
     """Representação interna de um tabuleiro do Puzzle Nuruomino."""
     
     def __init__(self, boardList, size, regionList):
-        self.boardList = boardList #inicializado como [] (lista vazia)
-        self.size = size
-        self.regionList = regionList
+        self.boardList = boardList #list of cells (Cell struct)
+        self.size = size #size of the board
+        self.regionList = regionList #list of regions (Region struct)
+        
+    def addLine(self, line:list) -> None:
+        "Recebe a lista do board"
+        self.boardList.append(line) #adds a list of cells corresponding to a row (cell struct)
+        
+    def addRegion(self, region:Region) -> None:
+        #adds a new region to the list of regions
+        self.regionList.append(region)
 
     def adjacent_regions(self, regionValue:int) -> list:
         """Devolve uma lista das regiões que fazem fronteira com a região enviada no argumento."""
         listAdjacentRegions = []
-        print("looking for region value:",regionValue)
         for region in self.regionList:
-            print("valor da regiao:", region.getValue())
             if region.getValue() == regionValue:
-                print("found!, value:",regionValue)
                 #found the region
                 for cell in region.getCells():
-                    listAdjacentValues = self.adjacent_values(cell.getRow(),cell.getCol())
+                    #goes through every cell in the region and gets all region values of adjacent cells of the current cell
+                    listAdjacentValues = self.adjacent_values(cell.getRow(),cell.getCol()) 
                     for value in listAdjacentValues:
+                        #goes through every region value
                         if value != regionValue and value not in listAdjacentRegions:
-                            print(f"for position {cell.getRow()} {cell.getCol()}, found region",value)
+                            #adds the value if it wasnt added before and if it is different than the region that the current cell is in
                             listAdjacentRegions.append(value)
                 break
                     
-        return sorted(listAdjacentRegions)
+        return sorted(listAdjacentRegions) #returns it sorted in ascending order [5,2,4,1] -> [1,2,4,5]
     
     def adjacent_positions(self, row:int, col:int) -> list:
         """Devolve as posições adjacentes à região, em todas as direções, incluindo diagonais."""
         
         listAdjacentPos = []
         
-        if row!=0:
+        if row!=0: #checks if the cell is on the first row
             if col!=0:
                 listAdjacentPos.append([row-1,col-1]) #top left corner
             if col!=self.size-1:
                 listAdjacentPos.append([row-1,col+1]) #top right corner
             listAdjacentPos.append([row-1,col]) #position above
             
-        if row!=self.size-1:
+        if row!=self.size-1: #checks if the cell is on the last row
             if col!=0:
                 listAdjacentPos.append([row+1,col-1]) #bottom left corner
             if col!=self.size-1:
                 listAdjacentPos.append([row+1,col+1]) #bottom right corner
             listAdjacentPos.append([row+1,col]) #position under
         
-        if col!=0:
+        if col!=0: #checks if the cell is on the left side of the board
                 listAdjacentPos.append([row,col-1]) #position on the left
-        if col!=self.size-1:
+                
+        if col!=self.size-1: #checks if the cell is on the right side of the board
             listAdjacentPos.append([row,col+1]) #position on the right 
             
         return listAdjacentPos
@@ -118,24 +128,15 @@ class Board:
         """Devolve os valores das celulas adjacentes à região, em todas as direções, incluindo diagonais."""
         listAdjacentValues = []
         
-        listAdjacentPos = self.adjacent_positions(row,col)
+        listAdjacentPos = self.adjacent_positions(row,col) #gets all adjacent position of the cell
         
         for row,col in listAdjacentPos:
+            #goes through every adjacent cell
             cell = self.boardList[row][col]
-            listAdjacentValues.append(cell.getRegionCell())
+            listAdjacentValues.append(cell.getRegionCell()) #gets the region value from the adjacent cell
         
         return listAdjacentValues
             
-        
-    
-    def addLine(self, line:list) -> None:
-        "Recebe a lista do board"
-        self.boardList.append(line)
-        
-    def addRegion(self, region:Region) -> None:
-        #adds a new region to the list of regions
-        self.regionList.append(region)
-    
     
     @staticmethod
     def parse_instance():
@@ -150,65 +151,63 @@ class Board:
         """
         
         valuesUsed = []
-        regionsCreated = []
     
-        line = stdin.readline().split() #lê a primeira linha
-        n = len(line) #o board é nxn
-        board = Board([],n,[]) #cria a instancia
+        line = stdin.readline().split() #reads the first line
+        n = len(line) #gets the board size (NxN)
+        board = Board([],n,[]) #creates the board
         
         firstLineCells = [] #lists of Cells from the first line
-        #creates cells from the first line
         col = 0
         for number in line:
-            number = int(number)
-            newCell = Cell(number,0,col)
-            firstLineCells.append(newCell)
+            #goes through every value in the input, which corresponds to a region value
+            number = int(number) 
+            newCell = Cell(number,0,col) #creates the new cell -> regionValue = number, row = 0, col = col
+            firstLineCells.append(newCell) #adds the cell to the list
+            
             if number not in valuesUsed:
-                #new region
-                newRegion = Region(number,[newCell])
-                board.addRegion(newRegion)
-                regionsCreated.append(newRegion)
-                valuesUsed.append(number)
-                print(f"created region {number} with position {0} {col}")
+                #new region found
+                newRegion = Region(number,[newCell]) #creates the region with the new cell
+                board.addRegion(newRegion) #adds the region to board instance
+                valuesUsed.append(number) #adds the region value to the list of regionValues found
             else:
                 #region already created
-                for region in regionsCreated:
+                for region in board.regionList:
+                    #goes through every region already created
                     if region.getValue() == number:
                         #found the region
-                        region.addCell(newCell)
-                        print(f"added to region {number} position {0} {col}")
+                        region.addCell(newCell) #adds the cell to the region instance
                         break
-            col+=1
+                    
+            col+=1 
                 
-            
-        board.addLine(firstLineCells) #adiciona a primeira linha ao board
+        board.addLine(firstLineCells) #adds the first row of cells to the board instance
         
-        #recebe todo o input e adiciona ao board
         for row in range(1,n):
+            #goes through every row left
             col = 0
             lineCells = []
             line = stdin.readline().split()
             for number in line:
+                #goes through every value in the input, which corresponds to a region value
                 number = int(number)
-                newCell = Cell(number,row,col)
-                lineCells.append(newCell)
+                newCell = Cell(number,row,col) #creates the new cell -> regionValue = number, row = row, col = col
+                lineCells.append(newCell) #adds the cell to the list of cells from this line/row
+                
                 if number not in valuesUsed:
-                    #new region
-                    newRegion = Region(number,[newCell])
-                    board.addRegion(newRegion)
-                    regionsCreated.append(newRegion)
-                    valuesUsed.append(number)
-                    print(f"created region {number} with position {row} {col}")
+                    #new region found
+                    newRegion = Region(number,[newCell]) #creates the region with the new cell
+                    board.addRegion(newRegion) #adds the region to board instance
+                    valuesUsed.append(number) #adds the region value to the list of regionValues found
                 else:
                     #region already created
-                    for region in regionsCreated:
+                    for region in board.regionList:
+                        #goes through every region already created
                         if region.getValue() == number:
                             #found the region
-                            region.addCell(newCell)
-                            print(f"added to region {number} position {row} {col}")
+                            region.addCell(newCell) #adds the cell to the region instance
                             break
                 col+=1
-            board.addLine(lineCells)
+            board.addLine(lineCells) #adds the row to the board instance
             
         return board
 
