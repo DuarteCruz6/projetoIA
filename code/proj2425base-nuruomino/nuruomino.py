@@ -129,24 +129,24 @@ class Board:
         
         listAdjacentPos = []
         
-        if row!=0: #checks if the cell is on the first row
-            if col!=0:
+        if row!=1: #checks if the cell is on the first row
+            if col!=1:
                 listAdjacentPos.append([row-1,col-1]) #top left corner
             listAdjacentPos.append([row-1,col]) #position above
-            if col!=self.size-1:
+            if col!=self.size:
                 listAdjacentPos.append([row-1,col+1]) #top right corner
             
-        if col!=0: #checks if the cell is on the left side of the board
+        if col!=1: #checks if the cell is on the left side of the board
                 listAdjacentPos.append([row,col-1]) #position on the left
                 
-        if col!=self.size-1: #checks if the cell is on the right side of the board
+        if col!=self.size: #checks if the cell is on the right side of the board
             listAdjacentPos.append([row,col+1]) #position on the right 
             
-        if row!=self.size-1: #checks if the cell is on the last row
-            if col!=0:
+        if row!=self.size: #checks if the cell is on the last row
+            if col!=1:
                 listAdjacentPos.append([row+1,col-1]) #bottom left corner
             listAdjacentPos.append([row+1,col]) #position under
-            if col!=self.size-1:
+            if col!=self.size:
                 listAdjacentPos.append([row+1,col+1]) #bottom right corner
         return listAdjacentPos
 
@@ -182,11 +182,11 @@ class Board:
         board = Board([],n,[]) #creates the board
         
         firstLineCells = [] #lists of Cells from the first line
-        col = 0
+        col = 1
         for number in line:
             #goes through every value in the input, which corresponds to a region value
             number = int(number) 
-            newCell = Cell(number,0,col) #creates the new cell -> regionValue = number, row = 0, col = col
+            newCell = Cell(number,1,col) #creates the new cell -> regionValue = number, row = 0, col = col
             firstLineCells.append(newCell) #adds the cell to the list
             
             if number not in valuesUsed:
@@ -207,9 +207,9 @@ class Board:
                 
         board.addLine(firstLineCells) #adds the first row of cells to the board instance
         
-        for row in range(1,n):
+        for row in range(2,n+1):
             #goes through every row left
-            col = 0
+            col = 1
             lineCells = []
             line = stdin.readline().split()
             for number in line:
@@ -233,7 +233,7 @@ class Board:
                             break
                 col+=1
             board.addLine(lineCells) #adds the row to the board instance
-            
+        
         return board
 
 
@@ -275,19 +275,3 @@ class Nuruomino(Problem):
         """Função heuristica utilizada para a procura A*."""
         # TODO
         pass
-    
-    
-# Ler grelha do figura 1a:
-board = Board.parse_instance()
-# Criar uma instância de Nuruomino:
-problem = Nuruomino(board)
-# Criar um estado com a configuração inicial:
-initial_state = NuruominoState(board)
-# Mostrar valor na posição (2, 1):
-print(initial_state.board.get_value(2, 1))
-# Realizar ação de colocar a peça L, cuja forma é [[1, 1],[1, 0],[1, 0]] na região 1
-result_state = s1 = problem.result(initial_state, (1,'L', [[1, 1],[1, 0],[1, 0]]))
-# Mostrar valor na posição (2, 1):
-print(result_state.board.get_value(2, 1))
-# Mostrar os valores de posições adjacentes
-print(result_state.board.adjacent_values(2,2))
