@@ -32,6 +32,7 @@ class Cell:
         
     def putShapeCell(self, shape:str) -> None:
         self.shape = shape
+        self.flagOccupied = True
 
 #struct Region
 class Region:
@@ -49,14 +50,33 @@ class Region:
     def addCell(self, newCell:Cell) -> None:
         self.cells.append(newCell) 
     
+    def putShape(self,shape,shapeForm) -> None:
+        firstCell = self.cells[0]
+        beginningRow = firstCell.getRow()
+        beginningCol = firstCell.getCol()
+        
+        for r in shapeForm:
+            colNow = beginningCol
+            for c in r:
+                if c == 1:
+                    #we want to occupy this cell
+                    cell = self.findCell(beginningRow,colNow)
+                    cell.putShapeCell(shape)
+                colNow+=1
+            beginningRow+=1
+    
+    def findCell(self,row,col) -> Cell:
+        for cell in self.cells:
+            if cell.getRow() == row and cell.getCol() == col:
+                return cell
 
 class NuruominoState:
     state_id = 0
 
     def __init__(self, board):
         self.board = board
-        self.id = Nuruomino.state_id
-        Nuruomino.state_id += 1
+        self.id = NuruominoState.state_id
+        NuruominoState.state_id += 1
 
     def __lt__(self, other):
         """ Este método é utilizado em caso de empate na gestão da lista
@@ -78,6 +98,13 @@ class Board:
     def addRegion(self, region:Region) -> None:
         #adds a new region to the list of regions
         self.regionList.append(region)
+    
+    def get_value(self, row:int, col:int) -> int:
+        cell = self.boardList[row-1][col-1]
+        if cell.flagOccupied:
+            #the cell is occupied
+            return cell.shape
+        return cell.getRegionCell()
 
     def adjacent_regions(self, regionValue:int) -> list:
         """Devolve uma lista das regiões que fazem fronteira com a região enviada no argumento."""
@@ -105,23 +132,22 @@ class Board:
         if row!=0: #checks if the cell is on the first row
             if col!=0:
                 listAdjacentPos.append([row-1,col-1]) #top left corner
+            listAdjacentPos.append([row-1,col]) #position above
             if col!=self.size-1:
                 listAdjacentPos.append([row-1,col+1]) #top right corner
-            listAdjacentPos.append([row-1,col]) #position above
             
-        if row!=self.size-1: #checks if the cell is on the last row
-            if col!=0:
-                listAdjacentPos.append([row+1,col-1]) #bottom left corner
-            if col!=self.size-1:
-                listAdjacentPos.append([row+1,col+1]) #bottom right corner
-            listAdjacentPos.append([row+1,col]) #position under
-        
         if col!=0: #checks if the cell is on the left side of the board
                 listAdjacentPos.append([row,col-1]) #position on the left
                 
         if col!=self.size-1: #checks if the cell is on the right side of the board
             listAdjacentPos.append([row,col+1]) #position on the right 
             
+        if row!=self.size-1: #checks if the cell is on the last row
+            if col!=0:
+                listAdjacentPos.append([row+1,col-1]) #bottom left corner
+            listAdjacentPos.append([row+1,col]) #position under
+            if col!=self.size-1:
+                listAdjacentPos.append([row+1,col+1]) #bottom right corner
         return listAdjacentPos
 
     def adjacent_values(self, row:int, col:int) -> list:
@@ -132,8 +158,7 @@ class Board:
         
         for row,col in listAdjacentPos:
             #goes through every adjacent cell
-            cell = self.boardList[row][col]
-            listAdjacentValues.append(cell.getRegionCell()) #gets the region value from the adjacent cell
+            listAdjacentValues.append(self.get_value(row,col)) #gets the region value from the adjacent cell
         
         return listAdjacentValues
             
@@ -230,8 +255,13 @@ class Nuruomino(Problem):
         das presentes na lista obtida pela execução de
         self.actions(state)."""
 
-        #TODO
-        pass 
+        #action -> (regionValue, shape, form of shape)
+        regionValue = action[0]
+        shape = action[1]
+        shapeForm = action[2]
+        region = state.board.regionList[regionValue-1]
+        region.putShape(shape,shapeForm)
+        return  state
         
 
     def goal_test(self, state: NuruominoState):
@@ -247,6 +277,17 @@ class Nuruomino(Problem):
         pass
     
     
+# Ler grelha do figura 1a:
 board = Board.parse_instance()
-print(board.adjacent_regions(1))
-print(board.adjacent_regions(3))
+# Criar uma instância de Nuruomino:
+problem = Nuruomino(board)
+# Criar um estado com a configuração inicial:
+initial_state = NuruominoState(board)
+# Mostrar valor na posição (2, 1):
+print(initial_state.board.get_value(2, 1))
+# Realizar ação de colocar a peça L, cuja forma é [[1, 1],[1, 0],[1, 0]] na região 1
+result_state = s1 = problem.result(initial_state, (1,'L', [[1, 1],[1, 0],[1, 0]]))
+# Mostrar valor na posição (2, 1):
+print(result_state.board.get_value(2, 1))
+# Mostrar os valores de posições adjacentes
+print(result_state.board.adjacent_values(2,2))
