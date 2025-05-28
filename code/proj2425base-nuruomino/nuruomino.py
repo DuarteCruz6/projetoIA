@@ -96,7 +96,6 @@ class Region:
                         cellsFromOtherRegions.append((rowNow,colNow,"X"))
                     else:    
                         cell.occupyCell()
-                    print(rowNow,colNow)
                 colNow+=1
             rowNow+=1
         self.flagOccupied = True
@@ -117,6 +116,38 @@ class Region:
     def isOccupied(self) -> bool:
         return self.flagOccupied
     
+    def fill(self):
+        #the region has 4 squares, so the fill is automatic
+        self.getShape()
+        #print(shape,shapeForm)
+    
+    def getShape(self):
+        #return the shape for the 4 squares regions
+        diffRows = set()
+        diffCols = set()
+        perCol = {}
+        perRow = {}
+        for cell in self.cells:
+            diffRows.add(cell.row)
+            diffCols.add(cell.col)
+            
+            if cell.row in perRow:
+                perRow[cell.row] += 1
+            else:
+                perRow[cell.row] = 1
+            if cell.col in perCol:
+                perCol[cell.col] += 1
+            else:
+                perCol[cell.col] = 1
+                
+        #if len(diffRows)==4:
+        #    return ("I",[[1,0],[1,0],[1,0],[1,0]])
+        #if len(diffCols)==4:
+        #    return ("I",[1,1,1,1])
+        
+        
+                
+            
 
 class NuruominoState:
     state_id = 0
@@ -302,9 +333,12 @@ class Board:
         return None
     
     #prints the board
-    def print(self) -> None:
+    def print(self) -> str:
+        res = ""
         for row in self.cellList:
-            print(" ".join([cell.get_value() for cell in row]))
+            res += " ".join([cell.get_value() for cell in row])
+            res += "\n"
+        return res
     
     def updatePriorityQueue(self):
         newQueue = []
@@ -317,7 +351,7 @@ class Board:
         index = 0
         indexNow = 0
         for priority in self.priorityQueueScores:
-            if priority!=0:
+            if priority>0:
                 if(lowestScore == 0 or priority<lowestScore):
                     lowestScore = priority
                     index = indexNow
@@ -337,7 +371,6 @@ class Board:
             if(crosses!=[]):
                 for (r,c) in crosses:
                     shapeForm[r][c] = "X"
-                print("crosses! ",shape)
         cellsFromOtherRegion = region.putShape(shape,shapeForm)
         for (row,col,shape) in cellsFromOtherRegion:
             cell = self.cellList[row-1][col-1]
@@ -413,6 +446,7 @@ class Nuruomino(Problem):
         if region.numSquares == 4:
             #we can simply put the supposed piece
             print("4 piece region -> fill automatically")
+            region.fill()
         pass 
 
     def result(self, state: NuruominoState, action):
@@ -460,14 +494,14 @@ s0 = NuruominoState(board)
 # Aplicar as ações que resolvem a instância
 s1 = problem.result(s0, (1,'L', [[1, 1],[1, 0],[1, 0]]))
 s2 = problem.result(s1, (2,'S', [[1, 0], [1, 1],[0, 1]]))
-#s3 = problem.result(s2, (3,'T', [[1, 0],[1, 1],[1, 0]]))
-#s4 = problem.result(s3, (4,'L', [[1, 1, 1],[1, 0, 0]]))
-#s5 = problem.result(s4, (5,'I', [[1],[1],[1],[1]]))
+s3 = problem.result(s2, (3,'T', [[1, 0],[1, 1],[1, 0]]))
+s4 = problem.result(s3, (4,'L', [[1, 1, 1],[1, 0, 0]]))
+s5 = problem.result(s4, (5,'I', [[1],[1],[1],[1]]))
 # Verificar se foi atingida a solução
 print("Is goal?", problem.goal_test(s1))
 print("Is goal?", problem.goal_test(s2))
-#print("Is goal?", problem.goal_test(s3))
-#print("Is goal?", problem.goal_test(s4))
-#print("Is goal?", problem.goal_test(s5))
+print("Is goal?", problem.goal_test(s3))
+print("Is goal?", problem.goal_test(s4))
+print("Is goal?", problem.goal_test(s5))
 
-print("Solution:\n", s2.board.print(), sep="")
+print("Solution:\n", s5.board.print(), sep="")
