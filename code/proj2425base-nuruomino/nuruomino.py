@@ -422,7 +422,7 @@ class Board:
             indexNow+=1
         return self.regionList[index]
         
-    def putShapeRegion(self,regionValue,shape,shapeForm):
+    def shapeRegion(self,regionValue,shape,shapeForm):
         region = self.findRegion(regionValue)
         if region.isOccupied():
             return 
@@ -432,34 +432,72 @@ class Board:
                 for (r,c) in crosses:
                     shapeForm[r][c] = "X"
                     
-        finished = False
+        possibleSpots = []
         startIndex = -1
-        while not finished:   
+        maxIndex = len(region.cells)
+        stop = False
+        while startIndex<maxIndex:   
             worked = False
             while not worked:
                 #while its empty, it keeps going -> stops when we occupy all 4 cells
-                startIndex+=1      
+                startIndex+=1   
+                print(startIndex,maxIndex)
+                if startIndex == maxIndex:
+                    stop = True 
+                    break   
                 cellsFromOtherRegion,cellsOccupied,worked = region.putShape(startIndex,shape,shapeForm)
                 if not worked: 
                     self.desocuppyCells(cellsOccupied)
-
-            desocupyFlag = False
-            for (row,col) in cellsFromOtherRegion:
-                cell = self.cellList[row-1][col-1]
-                if not cell.occupyCell():
-                    #the cell was previously occupied
-                    self.desocuppyCells(cellsOccupied)
-                    desocupyFlag = True
-                    break
-                else:
-                    cellsOccupied.append(cell)
-                    region = self.findRegion(cell.regionValue)
-                    region.removeSquare()
-            
-            if not desocupyFlag: finished = True
                 
+            if not stop:
+                desocupyFlag = False
+                for (row,col) in cellsFromOtherRegion:
+                    cell = self.cellList[row-1][col-1]
+                    if not cell.occupyCell():
+                        #the cell was previously occupied
+                        self.desocuppyCells(cellsOccupied)
+                        desocupyFlag = True
+                        break
+                    else:
+                        cellsOccupied.append(cell)
+                        regionToRemove = self.findRegion(cell.regionValue)
+                        regionToRemove.removeSquare()
+                
+                if not desocupyFlag: 
+                    #we save the spot in a list and clear the cells -> we need to choose the best spot (the one with the best score)
+                    score = len(cellsFromOtherRegion) #the less the better
+                    possibleSpots.append(((startIndex,shape,shapeForm),score))
+                    self.desocuppyCells(cellsOccupied)
+                
+        print("for region:",region.value,"possible spots:",len(possibleSpots))  
+        for spot in possibleSpots:
+            print(spot)    
         
+        bestInfo = self.getBestScoreShape(possibleSpots)
+        self.putShapeRegion(bestInfo,region)
         self.updatePriorityQueue()
+    
+    def putShapeRegion(self,info,region):
+        startIndex = info[0]
+        shape = info[1]
+        shapeForm = info[2]
+        cellsFromOtherRegion,_,_ = region.putShape(startIndex,shape,shapeForm)
+        for (row,col) in cellsFromOtherRegion:
+            cell = self.cellList[row-1][col-1]
+            cell.occupyCell()
+            region = self.findRegion(cell.regionValue)
+            region.removeSquare()
+    
+    def getBestScoreShape(self,possibleSpots):
+        print("possiblespots",len(possibleSpots))
+        #possibleSpots = startIndex,shape,shapeForm,score
+        minScore = possibleSpots[0][1]
+        best = possibleSpots[0][0]
+        for (info,score) in possibleSpots:
+            if score < minScore:
+                minScore = score
+                best = (info)
+        return best
     
     def desocuppyCells(self,cellsOccupied):
         for cell in cellsOccupied:
@@ -535,7 +573,7 @@ class Nuruomino(Problem):
             #we can simply put the supposed piece
             #print("4 piece region -> fill automatically")
             #(shape,shapeForm) = region.getShape()
-            # board.putShapeRegion(region.value,shape,shapeForm)
+            # board.shapeRegion(region.value,shape,shapeForm)
             pass
             
         
@@ -552,7 +590,7 @@ class Nuruomino(Problem):
         shape = action[1]
         shapeForm = action[2]
         newState = NuruominoState(state.board.copy()) #copies the board, but with new reference
-        newState.board.putShapeRegion(regionValue,shape,shapeForm)
+        newState.board.shapeRegion(regionValue,shape,shapeForm)
         return  newState
         
 
