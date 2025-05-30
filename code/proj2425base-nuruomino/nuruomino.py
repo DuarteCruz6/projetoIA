@@ -52,7 +52,7 @@ class Cell:
             return self.shape
         return str(self.getRegionCell())
     
-    def desoccupy(self):
+    def desoccupyCell(self):
         self.flagOccupied = False
         self.shape = ""
 
@@ -94,8 +94,9 @@ class Region:
         self.cells.append(newCell) 
         self.addSquare()
     
-    def putShape(self,shape,shapeForm) -> None:
-        firstCell = self.cells[0]
+    def putShape(self,startIndex,shape,shapeForm) -> None:
+        worked = False
+        firstCell = self.cells[startIndex]
         rowNow = firstCell.getRow()
         beginningCol = firstCell.getCol()
         cellsFromOtherRegions = []
@@ -106,9 +107,11 @@ class Region:
                 if c == 1:
                     #we want to occupy this cell
                     cell = self.findCell(rowNow,colNow)
+                    if cell == None:
+                        return [],cellsOccupied,worked
                     if not cell.putShapeCell(shape):
-                        self.desocuppyCells(cellsOccupied)
-                        return [],[]
+                        self.desoccupyCells(cellsOccupied)
+                        return [],cellsOccupied,worked
                     else:
                         cellsOccupied.append(cell)
                         self.removeSquare()
@@ -118,25 +121,26 @@ class Region:
                     cell = self.findCell(rowNow,colNow)
                     if cell == None:
                         #its from another region
-                        cellsFromOtherRegions.append((rowNow,colNow,"X"))
+                        cellsFromOtherRegions.append((rowNow,colNow))
                     else:    
                         if not cell.occupyCell():
                             #the cell was already occupied
-                            self.desocuppyCells(cellsOccupied)
-                            return [],[]
+                            self.desoccupyCells(cellsOccupied)
+                            return [],cellsOccupied,worked
                         else:
                             cellsOccupied.append(cell)
                             self.removeSquare()
                 colNow+=1
             rowNow+=1
+        worked = True
         self.flagOccupied = True
         self.numSquares = 0
         self.numRestrictions = 0
-        return cellsFromOtherRegions,cellsOccupied
+        return cellsFromOtherRegions,cellsOccupied,worked
 
-    def desocuppyCells(self,cellsOccupied):
+    def desoccupyCells(self,cellsOccupied):
         for cell in cellsOccupied:
-            cell.desoccupy()
+            cell.desoccupyCell()
             self.addSquare()
     
     def findCell(self,row,col) -> Cell:
@@ -258,6 +262,7 @@ class Board:
                     #goes through every cell in the region and gets all region values of adjacent cells of the current cell
                     listAdjacentValues = self.adjacent_values(cell.getRow(),cell.getCol()) 
                     for value in listAdjacentValues:
+                        value = int(value)
                         #goes through every region value
                         if value != regionValue and value not in listAdjacentRegions:
                             #adds the value if it wasnt added before and if it is different than the region that the current cell is in
@@ -423,26 +428,42 @@ class Board:
             return 
         if shape in ["L","S","T"]:
             crosses = self.findCrosses(shapeForm)
-            if(crosses!=[]):
+            if(crosses):
                 for (r,c) in crosses:
                     shapeForm[r][c] = "X"
                     
-        cellsFromOtherRegion,cellsOccupied = region.putShape(shape,shapeForm)
-        for (row,col,shape) in cellsFromOtherRegion:
-            cell = self.cellList[row-1][col-1]
-            if not cell.occupyCell():
-                #the cell was previously occupied
-                self.desocuppyCells(cellsOccupied)
-                break
-            else:
-                cellsOccupied.append(cell)
-                region = self.findRegion(cell.regionValue)
-                region.removeSquare()
+        finished = False
+        startIndex = -1
+        while not finished:   
+            worked = False
+            while not worked:
+                #while its empty, it keeps going -> stops when we occupy all 4 cells
+                startIndex+=1      
+                cellsFromOtherRegion,cellsOccupied,worked = region.putShape(startIndex,shape,shapeForm)
+                if not worked: 
+                    self.desocuppyCells(cellsOccupied)
+
+            desocupyFlag = False
+            for (row,col) in cellsFromOtherRegion:
+                cell = self.cellList[row-1][col-1]
+                if not cell.occupyCell():
+                    #the cell was previously occupied
+                    self.desocuppyCells(cellsOccupied)
+                    desocupyFlag = True
+                    break
+                else:
+                    cellsOccupied.append(cell)
+                    region = self.findRegion(cell.regionValue)
+                    region.removeSquare()
+            
+            if not desocupyFlag: finished = True
+                
+        
         self.updatePriorityQueue()
     
     def desocuppyCells(self,cellsOccupied):
         for cell in cellsOccupied:
-            cell.desoccupy()
+            cell.desoccupyCell()
             region = self.findRegion(cell.regionValue)
             region.addSquare()
        
@@ -508,7 +529,7 @@ class Nuruomino(Problem):
         board = state.board
         
         region = board.getRegionBiggestPriority()
-        print(" ".join([str(i) for i in board.priorityQueueScores]))
+        #print(" ".join([str(i) for i in board.priorityQueueScores]))
         
         if region.numSquares == 4:
             #we can simply put the supposed piece
@@ -562,22 +583,12 @@ problem = Nuruomino(board)
 # Criar um estado com a configuração inicial:
 s0 = NuruominoState(board)
 # Aplicar as ações que resolvem a instância
-#s1 = problem.result(s0, (1,'L', [[1, 1],[1, 0],[1, 0]]))
-#s2 = problem.result(s1, (2,'S', [[1, 0], [1, 1],[0, 1]]))
-#s3 = problem.result(s2, (3,'T', [[1, 0],[1, 1],[1, 0]]))
-#s4 = problem.result(s3, (4,'L', [[1, 1, 1],[1, 0, 0]]))
-#s5 = problem.result(s4, (5,'I', [[1],[1],[1],[1]]))
-
 s1 = problem.result(s0, (1,'L', [[1, 1],[1, 0],[1, 0]]))
 s2 = problem.result(s1, (2,'S', [[1, 0], [1, 1],[0, 1]]))
-s3 = problem.result(s2, (4,'L', [[1, 1, 1],[1, 0, 0]]))
-s4 = problem.result(s3, (5,'I', [[1],[1],[1],[1]]))
-s5 = problem.result(s4, (3,'T', [[1, 0],[1, 1],[1, 0]]))
+s3 = problem.result(s2, (3,'T', [[1, 0],[1, 1],[1, 0]]))
+s4 = problem.result(s3, (4,'L', [[1, 1, 1],[1, 0, 0]]))
+s5 = problem.result(s4, (5,'I', [[1],[1],[1],[1]]))
 # Verificar se foi atingida a solução
-print("Is goal?", problem.goal_test(s1))
 print("Is goal?", problem.goal_test(s2))
-print("Is goal?", problem.goal_test(s3))
-print("Is goal?", problem.goal_test(s4))
 print("Is goal?", problem.goal_test(s5))
-
 print("Solution:\n", s5.board.print(), sep="")
