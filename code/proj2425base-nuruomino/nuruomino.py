@@ -9,6 +9,31 @@
 from sys import stdin
 from search import Problem, Node  # Import the classes from search.py
 
+
+####################### Auxiliar Functions #######################
+
+def zigzagOrder(lst: list) -> list:
+    '''
+    [1, 2, 3, 4] -> [1, 4, 2, 3]\n
+    [1, 2, 3, 4, 5, 6, 7] -> [1, 7, 2, 6, 3, 5, 4]
+    '''
+    zigzag_order = []
+    i = 0
+    j = len(lst) - 1
+
+    while i < j:
+        zigzag_order.append(lst[i])
+        zigzag_order.append(lst[j])
+        i += 1
+        j -= 1
+    
+    if i == j: zigzag_order.append(lst[i])
+
+    return zigzag_order
+
+##################################################################
+
+
 #struct Cell
 class Cell:
     def __init__(self, regionValue:int, row:int, col:int):
@@ -494,7 +519,46 @@ class Board:
                 if shapeForm[rowNum+1][colNum-1] == 1:
                     return True
         return False
-                
+    
+    
+    def getAdjacentCellsSameRegion(self, cell: Cell):
+        adjacent_cells_same_region = []
+        row_var = -1, 0, 1, 0
+        col_var = 0, 1, 0, -1
+        max = self.size - 1
+
+        # Check up, right, down and left, respectively
+        for i in range(4):
+            row = cell.getRow() + row_var[i]
+            col = cell.getCol() + col_var[i]
+            if row < 0 or col < 0 or row > max or col > max: continue
+            new_cell = self.cellList[row][col]
+            if cell.getRegionCell() == new_cell.getRegionCell(): adjacent_cells_same_region.append(new_cell)
+
+        return adjacent_cells_same_region
+
+    
+
+    def getPossibleShapesStartingOnCell(self, region: Region, cell: Cell) -> list[set]:
+        # TODO
+        pass
+        
+    
+
+    def fillRegionOverlaps(self, region: Region):
+        first_iter = True
+        cells = zigzagOrder(region.getCells()) # To fail faster in bigger regions
+        overlap = set()
+        for cell in cells:
+            possible_shapes = self.getPossibleShapesStartingOnCell(region, cell)
+            if first_iter:
+                overlap = set(possible_shapes[0]) # It can't cause an exception because the first cell will always find a shape
+                first_iter = False
+            for cells_set in possible_shapes:
+                overlap = overlap & cells_set
+                if not overlap: return # No overlap on the region, stop searching
+
+
 
 class Nuruomino(Problem):
     def __init__(self, board: Board):
