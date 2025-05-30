@@ -34,19 +34,27 @@ class Cell:
     def getRegionCell(self) -> int:
         return self.regionValue
         
-    def occupyCell(self) -> None:
+    def occupyCell(self) -> bool:
+        if self.flagOccupied: return False
         self.flagOccupied = True
         self.shape = "X"
+        return True
         
     def putShapeCell(self, shape:str) -> None:
+        if self.flagOccupied: return False
         self.shape = shape
         self.flagOccupied = True
+        return True
         
     def get_value(self):
         if self.flagOccupied:
             #the cell is occupied
             return self.shape
         return str(self.getRegionCell())
+    
+    def desoccupy(self):
+        self.flagOccupied = False
+        self.shape = ""
 
 #struct Region
 class Region:
@@ -70,24 +78,41 @@ class Region:
     
     def getCells(self) -> list:
         return self.cells
+    
+    def addSquare(self):
+        self.numSquares += 1
+        if self.flagOccupied:
+            self.flagOccupied = False
+    
+    def removeSquare(self):
+        self.numSquares -= 1
+        if self.numSquares == 0:
+            self.flagOccupied = True
      
     #adds a new cell to the region   
     def addCell(self, newCell:Cell) -> None:
         self.cells.append(newCell) 
-        self.numSquares += 1
+        self.addSquare()
     
     def putShape(self,shape,shapeForm) -> None:
         firstCell = self.cells[0]
         rowNow = firstCell.getRow()
         beginningCol = firstCell.getCol()
         cellsFromOtherRegions = []
+        cellsOccupied = []
         for r in shapeForm:
             colNow = beginningCol
             for c in r:
                 if c == 1:
                     #we want to occupy this cell
                     cell = self.findCell(rowNow,colNow)
-                    cell.putShapeCell(shape)
+                    if not cell.putShapeCell(shape):
+                        self.desocuppyCells(cellsOccupied)
+                        return [],[]
+                    else:
+                        cellsOccupied.append(cell)
+                        self.removeSquare()
+                        
                 elif c == "X":
                     #this cell is a cross
                     cell = self.findCell(rowNow,colNow)
@@ -95,13 +120,24 @@ class Region:
                         #its from another region
                         cellsFromOtherRegions.append((rowNow,colNow,"X"))
                     else:    
-                        cell.occupyCell()
+                        if not cell.occupyCell():
+                            #the cell was already occupied
+                            self.desocuppyCells(cellsOccupied)
+                            return [],[]
+                        else:
+                            cellsOccupied.append(cell)
+                            self.removeSquare()
                 colNow+=1
             rowNow+=1
         self.flagOccupied = True
         self.numSquares = 0
         self.numRestrictions = 0
-        return cellsFromOtherRegions
+        return cellsFromOtherRegions,cellsOccupied
+
+    def desocuppyCells(self,cellsOccupied):
+        for cell in cellsOccupied:
+            cell.desoccupy()
+            self.addSquare()
     
     def findCell(self,row,col) -> Cell:
         for cell in self.cells:
@@ -116,38 +152,55 @@ class Region:
     def isOccupied(self) -> bool:
         return self.flagOccupied
     
-    def fill(self):
-        #the region has 4 squares, so the fill is automatic
-        self.getShape()
-        #print(shape,shapeForm)
-    
     def getShape(self):
         #return the shape for the 4 squares regions
-        diffRows = set()
-        diffCols = set()
+        diffRows = 0
+        rows = []
+        diffCols = 0
+        cols = []
         perCol = {}
         perRow = {}
         for cell in self.cells:
-            diffRows.add(cell.row)
-            diffCols.add(cell.col)
-            
-            if cell.row in perRow:
-                perRow[cell.row] += 1
+            if cell.row not in rows:
+                perRow[diffRows] = 1
+                rows.append(cell.row)
+                diffRows += 1
             else:
-                perRow[cell.row] = 1
-            if cell.col in perCol:
-                perCol[cell.col] += 1
+                index = rows.index(cell.row)
+                perRow[index] += 1
+            if cell.col not in cols:
+                perCol[diffCols] = 1
+                cols.append(cell.col)
+                diffCols += 1
             else:
-                perCol[cell.col] = 1
-                
-        #if len(diffRows)==4:
-        #    return ("I",[[1,0],[1,0],[1,0],[1,0]])
-        #if len(diffCols)==4:
-        #    return ("I",[1,1,1,1])
-        
-        
-                
+                index = cols.index(cell.col)
+                perCol[index] += 1
             
+   
+        if diffRows==4 or diffCols==4:
+            shape = "I"
+        
+        if perRow[max(perRow, key=perRow.get)] == 3 or perCol[max(perCol, key=perCol.get)] == 3:
+            #either a L or T
+            if perRow[1] == 2 or perCol[1] == 2:
+                #the middle row/col has 2 cells, so it is a T
+                shape = "T"
+            else:
+                shape = "L"
+        shape = "S"
+        shapeForm = []
+        for row in perRow:
+            rowForm = []
+            for col in perCol:
+                if perCol[col] != 0:
+                    rowForm.append(1)
+                    perCol[col]-=1
+                else: 
+                    rowForm.append(0)
+            shapeForm.append(rowForm)
+        return (shape,shapeForm)
+                    
+                         
 
 class NuruominoState:
     state_id = 0
@@ -366,18 +419,32 @@ class Board:
         
     def putShapeRegion(self,regionValue,shape,shapeForm):
         region = self.findRegion(regionValue)
+        if region.isOccupied():
+            return 
         if shape in ["L","S","T"]:
             crosses = self.findCrosses(shapeForm)
             if(crosses!=[]):
                 for (r,c) in crosses:
                     shapeForm[r][c] = "X"
-        cellsFromOtherRegion = region.putShape(shape,shapeForm)
+                    
+        cellsFromOtherRegion,cellsOccupied = region.putShape(shape,shapeForm)
         for (row,col,shape) in cellsFromOtherRegion:
             cell = self.cellList[row-1][col-1]
-            cell.occupyCell()
-            region = self.findRegion(cell.regionValue)
-            region.numSquares -=1
+            if not cell.occupyCell():
+                #the cell was previously occupied
+                self.desocuppyCells(cellsOccupied)
+                break
+            else:
+                cellsOccupied.append(cell)
+                region = self.findRegion(cell.regionValue)
+                region.removeSquare()
         self.updatePriorityQueue()
+    
+    def desocuppyCells(self,cellsOccupied):
+        for cell in cellsOccupied:
+            cell.desoccupy()
+            region = self.findRegion(cell.regionValue)
+            region.addSquare()
        
     def findCrosses(self,shapeForm):
         crossesIndexes = []
@@ -445,9 +512,12 @@ class Nuruomino(Problem):
         
         if region.numSquares == 4:
             #we can simply put the supposed piece
-            print("4 piece region -> fill automatically")
-            region.fill()
-        pass 
+            #print("4 piece region -> fill automatically")
+            #(shape,shapeForm) = region.getShape()
+            # board.putShapeRegion(region.value,shape,shapeForm)
+            pass
+            
+        
 
     def result(self, state: NuruominoState, action):
         """Retorna o estado resultante de executar a 'action' sobre
@@ -492,11 +562,17 @@ problem = Nuruomino(board)
 # Criar um estado com a configuração inicial:
 s0 = NuruominoState(board)
 # Aplicar as ações que resolvem a instância
+#s1 = problem.result(s0, (1,'L', [[1, 1],[1, 0],[1, 0]]))
+#s2 = problem.result(s1, (2,'S', [[1, 0], [1, 1],[0, 1]]))
+#s3 = problem.result(s2, (3,'T', [[1, 0],[1, 1],[1, 0]]))
+#s4 = problem.result(s3, (4,'L', [[1, 1, 1],[1, 0, 0]]))
+#s5 = problem.result(s4, (5,'I', [[1],[1],[1],[1]]))
+
 s1 = problem.result(s0, (1,'L', [[1, 1],[1, 0],[1, 0]]))
 s2 = problem.result(s1, (2,'S', [[1, 0], [1, 1],[0, 1]]))
-s3 = problem.result(s2, (3,'T', [[1, 0],[1, 1],[1, 0]]))
-s4 = problem.result(s3, (4,'L', [[1, 1, 1],[1, 0, 0]]))
-s5 = problem.result(s4, (5,'I', [[1],[1],[1],[1]]))
+s3 = problem.result(s2, (4,'L', [[1, 1, 1],[1, 0, 0]]))
+s4 = problem.result(s3, (5,'I', [[1],[1],[1],[1]]))
+s5 = problem.result(s4, (3,'T', [[1, 0],[1, 1],[1, 0]]))
 # Verificar se foi atingida a solução
 print("Is goal?", problem.goal_test(s1))
 print("Is goal?", problem.goal_test(s2))
