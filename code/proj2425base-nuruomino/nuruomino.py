@@ -2,7 +2,7 @@
 # Devem alterar as classes e funções neste ficheiro de acordo com as instruções do enunciado.
 # Além das funções e classes sugeridas, podem acrescentar outras que considerem pertinentes.
 
-# Grupo 00:
+# Grupo 32:
 # 110181 Duarte Cruz
 # 110239 André Pagaime
 
@@ -889,20 +889,3 @@ class Nuruomino(Problem):
         #    pass
         # TODO
         pass
-        
-# Ler grelha do figura 1a:
-board = Board.parse_instance()
-# Criar uma instância de Nuruomino:
-problem = Nuruomino(board)
-# Criar um estado com a configuração inicial:
-s0 = NuruominoState(board)
-# Aplicar as ações que resolvem a instância
-s1 = problem.result(s0, (1,'L', [[1, 1],[1, 0],[1, 0]]))
-s2 = problem.result(s1, (2,'S', [[1, 0], [1, 1],[0, 1]]))
-s3 = problem.result(s2, (3,'T', [[1, 0],[1, 1],[1, 0]]))
-s4 = problem.result(s3, (4,'L', [[1, 1, 1],[1, 0, 0]]))
-s5 = problem.result(s4, (5,'I', [[1],[1],[1],[1]]))
-# Verificar se foi atingida a solução
-print("Is goal?", problem.goal_test(s2))
-print("Is goal?", problem.goal_test(s5))
-print("Solution:\n", s5.board.print(), sep="")
