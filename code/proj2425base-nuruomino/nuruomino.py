@@ -7,7 +7,7 @@
 # 110239 André Pagaime
 
 from sys import stdin
-from search import Problem, Node  # Import the classes from search.py
+from search import *  # Import the classes from search.py
 import numpy as np
 
  
@@ -774,8 +774,7 @@ class Board:
 class Nuruomino(Problem):
     def __init__(self, board: Board):
         """O construtor especifica o estado inicial."""
-        #TODO
-        pass 
+        self.initial = NuruominoState(board)
 
     def actions(self, state: NuruominoState):
         """Retorna uma lista de ações que podem ser executadas a
@@ -794,7 +793,6 @@ class Nuruomino(Problem):
                         worked = board.shapeRegion(region.value,shape,[row[:] for row in shapeForm],False)  
                         if worked:
                             listActions.append((region.value,(shape,shapeForm)))
-                
         return listActions       
 
     def result(self, state: NuruominoState, action):
@@ -804,10 +802,17 @@ class Nuruomino(Problem):
         self.actions(state)."""
         listActions = self.actions(state) #listActions = [(regionValue,(shape,shapeForm))]
         
-        #action -> (regionValue, shape, form of shape)
-        regionValue = action[0]
-        shape = action[1]
-        shapeForm = action[2]
+        if len(action) == 2:
+            #action -> (regionValue, (shape, form of shape))
+            regionValue = action[0]
+            shape = action[1][0]
+            shapeForm = action[1][1]
+        else:
+            #action -> (regionValue, shape, form of shape)
+            regionValue = action[0]
+            shape = action[1]
+            shapeForm = action[2]
+            
         newState = NuruominoState(state.board.copy()) #copies the board, but with new reference
         if (regionValue,(shape,shapeForm)) in listActions:
             #the action is in listActions, so we do it
