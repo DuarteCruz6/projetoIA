@@ -208,11 +208,9 @@ class Region:
                     #we want to occupy this cell
                     cell = self.findCell(rowNow,colNow)
                     if cell == None:
-                        #print("cell = none",shape,shapeForm,startIndex)
                         return [],cellsOccupied,worked
                     if not cell.putShapeCell(shape):
                         self.desoccupyCells(cellsOccupied)
-                        #print("not cell.putShapeCell",shape,shapeForm,startIndex)
                         return [],cellsOccupied,worked
                     else:
                         cellsOccupied.append(cell)
@@ -228,7 +226,6 @@ class Region:
                         if not cell.occupyCell():
                             #the cell was already occupied
                             self.desoccupyCells(cellsOccupied)
-                            #print("not cell.occupyCell()",shape,shapeForm,startIndex)
                             return [],cellsOccupied,worked
                         else:
                             cellsOccupied.append(cell)
@@ -239,7 +236,6 @@ class Region:
         self.flagOccupied = True
         self.numSquares = 0
         self.numRestrictions = 0
-        #print("put shape ok",shape,shapeForm,startIndex)
         return cellsFromOtherRegions,cellsOccupied,worked
 
     def desoccupyCells(self,cellsOccupied):
@@ -537,7 +533,6 @@ class Board:
         #    shapeFormOriginal = np.array(shapeForm, copy=True)
         region = self.findRegion(regionValue)
         if region.isOccupied():
-            #print("region",shape,shapeForm,regionValue)
             return 
         if shape in ["L","S","T"]:
             crosses = self.findCrosses(shapeForm)
@@ -559,7 +554,6 @@ class Board:
                     break   
                 cellsFromOtherRegion,cellsOccupied,worked = region.putShape(startIndex,shape,shapeForm)
                 if not worked: 
-                    #print("not worked",shape,shapeForm,regionValue)
                     self.desocuppyCells(cellsOccupied)
                 
             if not stop:
@@ -570,7 +564,6 @@ class Board:
                         #the cell was previously occupied
                         self.desocuppyCells(cellsOccupied)
                         desocupyFlag = True
-                        #print("desocupyFlag",shape,shapeForm,regionValue)
                         break
                     else:
                         cellsOccupied.append(cell)
@@ -683,28 +676,16 @@ class Nuruomino(Problem):
         for region in board.regionList:
             if region.numSquares == 4:
                 #we can simply put the supposed piece, since it is a 4 piece region
-                #print("4 piece region -> fill automatically",region.value)
                 action = region.getShape() #action = (shape,shapeForm)
                 listActions.append((region.value,action))
-                #print("new action unlocked 4 squares")
-                #print(action)
             else:
                 #the region has more than 4 squares, so we need to test each shape and shapeForm
                 for shape in shapeDict:
-                    
                     for shapeForm in shapeDict[shape]:
                         worked = board.shapeRegion(region.value,shape,[row[:] for row in shapeForm],False)  
                         if worked:
-                            #print("new action unlocked more than 4 squares")
-                            ##print(region.value,(shape,shapeForm))
-                            #print(region.value,(shape,shapeForm))
                             listActions.append((region.value,(shape,shapeForm)))
-                        #else:
-                            #print("action didnt work more than 4 squares")
-                            #print(region.value,(shape,shapeForm))
                 
-                
-        #print(listActions)
         return listActions       
 
     def result(self, state: NuruominoState, action):
@@ -712,7 +693,6 @@ class Nuruomino(Problem):
         'state' passado como argumento. A ação a executar deve ser uma
         das presentes na lista obtida pela execução de
         self.actions(state)."""
-        #print("aaa")
         listActions = self.actions(state) #listActions = [(regionValue,(shape,shapeForm))]
         
         #action -> (regionValue, shape, form of shape)
@@ -723,14 +703,10 @@ class Nuruomino(Problem):
         if (regionValue,(shape,shapeForm)) in listActions:
             #the action is in listActions, so we do it
             newState = NuruominoState(state.board.copy()) #copies the board, but with new reference
-            
             newState.board.shapeRegion(regionValue,shape,shapeForm,True)
             return  newState
         else:
-            #print("actions")
-            #print(listActions)
-            ####the action is not in listActions, so it is not a possible action
-            #print("not possible:",action)
+            #the action is not in listActions, so it is not a possible action
             return state
         
 
@@ -740,7 +716,6 @@ class Nuruomino(Problem):
         estão preenchidas de acordo com as regras do problema."""
         #checks if every region is occupied 
         for region in state.board.regionList:
-            #print(region.value)
             if not region.isOccupied():
                 return False
             
