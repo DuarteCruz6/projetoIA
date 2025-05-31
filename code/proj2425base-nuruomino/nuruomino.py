@@ -118,6 +118,7 @@ class Cell:
         copied = Cell(self.regionValue, self.row, self.col)
         copied.flagOccupied = self.flagOccupied
         copied.shape = self.shape
+        copied.restrictions = self.restrictions
         return copied
     
     def getRow(self) -> int:
@@ -222,6 +223,7 @@ class Region:
                 if c == 1:
                     #we want to occupy this cell
                     cell = self.findCell(rowNow,colNow)
+                    
                     if cell == None:
                         return [],cellsOccupied,worked
                     if not cell.putShapeCell(shape):
@@ -346,7 +348,12 @@ class Board:
     
     #for creating new states with the same board, but with new references
     def copy(self):
-        copied_cellList = [cell.copy() for cell in self.cellList]
+        copied_cellList = []
+        for r in self.cellList:
+            row = []
+            for cell in r:
+                row.append(cell.copy())
+            copied_cellList.append(row)
         copied_regionList = []
         for region in self.regionList:
             newCellList = []
@@ -354,7 +361,7 @@ class Board:
                 newCellList.append(copied_cellList[cell.row-1][cell.col-1])
             newRegion = region.copy(newCellList)
             copied_regionList.append(newRegion)
-        return Board(copied_cellList, self.size, copied_regionList,self.priorityQueueScores)
+        return Board(copied_cellList, self.size, copied_regionList,self.priorityQueueScores.copy())
         
     def addLine(self, line:list) -> None:
         "Recebe a lista do board"
@@ -389,19 +396,33 @@ class Board:
     
     def adjacent_positions(self, row:int, col:int) -> list:
         """Devolve as posições adjacentes à região, em todas as direções, incluindo diagonais."""
-        listAdjacentPos = self.adjacents_positions_without_diagonals(row,col)
+        listAdjacentPos = []
+        noDiagonals = self.adjacents_positions_without_diagonals(row,col) #all adjacents, without diagonals
+        noDiagonalsIndex = 0
         
         if row!=1: #checks if the cell is on the first row
             if col!=1:
                 listAdjacentPos.append([row-1,col-1]) #top left corner
+            listAdjacentPos.append(noDiagonals[noDiagonalsIndex]) #above position
+            noDiagonalsIndex+=1
             if col!=self.size:
                 listAdjacentPos.append([row-1,col+1]) #top right corner
+        
+        if col!=1: #checks if the cell is on the left side of the board
+            listAdjacentPos.append(noDiagonals[noDiagonalsIndex]) #left position
+            noDiagonalsIndex+=1
+            
+        if col!=self.size: #checks if the cell is on the right side of the board
+            listAdjacentPos.append(noDiagonals[noDiagonalsIndex]) #right position
+            noDiagonalsIndex+=1
             
         if row!=self.size: #checks if the cell is on the last row
             if col!=1:
                 listAdjacentPos.append([row+1,col-1]) #bottom left corner
+            listAdjacentPos.append(noDiagonals[noDiagonalsIndex]) #under position
             if col!=self.size:
                 listAdjacentPos.append([row+1,col+1]) #bottom right corner
+                
         return listAdjacentPos
     
     def adjacents_positions_without_diagonals(self, row:int, col:int):
@@ -579,17 +600,27 @@ class Board:
                 
             if not stop:
                 desocupyFlag = False
-                for (row,col) in cellsFromOtherRegion:
-                    cell = self.cellList[row-1][col-1]
-                    if not cell.occupyCell():
-                        #the cell was previously occupied
-                        self.desocuppyCells(cellsOccupied)
-                        desocupyFlag = True
-                        break
-                    else:
-                        cellsOccupied.append(cell)
-                        regionToRemove = self.findRegion(cell.regionValue)
-                        regionToRemove.updateSquares()
+                
+                #checks if there were any squares made, desocupyFlag = True if so
+                desocupyFlag = self.madeSquares(cellsOccupied)
+                
+                if desocupyFlag:
+                    #made a square
+                    self.desocuppyCells(cellsOccupied)
+                else:
+                    #checks if we are going to put an X in a filled cell
+                    for (row,col) in cellsFromOtherRegion:
+                        cell = self.cellList[row-1][col-1]
+                        if not cell.occupyCell():
+                            #the cell was previously occupied
+                            self.desocuppyCells(cellsOccupied)
+                            desocupyFlag = True
+                            break
+                        else:
+                            cellsOccupied.append(cell)
+                            regionToRemove = self.findRegion(cell.regionValue)
+                            regionToRemove.updateSquares()
+                    
 
                 if not desocupyFlag: 
                     #we save the spot in a list and clear the cells -> we need to choose the best spot (the one with the best score)
@@ -597,12 +628,53 @@ class Board:
                     possibleSpots.append(((startIndex,shape,shapeForm),score))
                     self.desocuppyCells(cellsOccupied)
 
-        if isToInsert:      
+        if isToInsert and len(possibleSpots) > 0:      
             bestInfo = self.getBestScoreShape(possibleSpots)
             self.putShapeRegion(bestInfo,region)
             self.updatePriorityQueue()
         else:
             return len(possibleSpots) > 0
+        
+    def madeSquares(self,cellsOccupied):
+        max = self.size-1
+        for cell in cellsOccupied:
+            #we need to check above, under, right and left values
+            row = cell.row
+            col = cell.col 
+            if cell.shape!="X":
+                if row>1:
+                    #we need to check the above position
+                    if self.get_value(row-1,col) in ["L","S","T","I"]:
+                        #the above position is occupied, so now we need to check the left and the right
+                        if col>1:
+                            if self.get_value(row,col-1) in ["L","S","T","I"]:
+                                #the left position is occupied, so now we need to check the top left corner
+                                if self.get_value(row-1,col-1) in ["L","S","T","I"]:
+                                    #it made a square
+                                    return True
+                        if col<max:
+                            if self.get_value(row,col+1) in ["L","S","T","I"]:
+                                #the right position is occupied, so now we need to check the top right corner
+                                if self.get_value(row-1,col+1) in ["L","S","T","I"]:
+                                    #it made a square
+                                    return True
+                if row<max:
+                    #we need to check the under position
+                    if self.get_value(row+1,col) in ["L","S","T","I"]:
+                        #the under position is occupied, so now we need to check the left and the right
+                        if col>1:
+                            if self.get_value(row,col-1) in ["L","S","T","I"]:
+                                #the left position is occupied, so now we need to check the bottom left corner
+                                if self.get_value(row+1,col-1) in ["L","S","T","I"]:
+                                    #it made a square
+                                    return True
+                        if col<max:
+                            if self.get_value(row,col+1) in ["L","S","T","I"]:
+                                #the right position is occupied, so now we need to check the bottom right corner
+                                if self.get_value(row+1,col+1) in ["L","S","T","I"]:
+                                    #it made a square
+                                    return True
+        return False   
     
     def putShapeRegion(self,info,region):
         startIndex = info[0]
@@ -736,15 +808,14 @@ class Nuruomino(Problem):
         regionValue = action[0]
         shape = action[1]
         shapeForm = action[2]
-        
+        newState = NuruominoState(state.board.copy()) #copies the board, but with new reference
         if (regionValue,(shape,shapeForm)) in listActions:
             #the action is in listActions, so we do it
-            newState = NuruominoState(state.board.copy()) #copies the board, but with new reference
             newState.board.shapeRegion(regionValue,shape,shapeForm,True)
-            return  newState
+            return newState
         else:
             #the action is not in listActions, so it is not a possible action
-            return state
+            return newState
         
 
     def goal_test(self, state: NuruominoState):
@@ -774,3 +845,28 @@ class Nuruomino(Problem):
         # TODO
         pass
         
+# Ler grelha do figura 1a:
+board = Board.parse_instance()
+# Criar uma instância de Nuruomino:
+problem = Nuruomino(board)
+# Criar um estado com a configuração inicial:
+s0 = NuruominoState(board)
+# Aplicar as ações que resolvem a instância
+s1 = problem.result(s0, (1,'L', [[1, 1],[1, 0],[1, 0]]))
+s2 = problem.result(s1, (2,'S', [[1, 0], [1, 1],[0, 1]]))
+s3 = problem.result(s2, (3,'T', [[1, 0],[1, 1],[1, 0]]))
+s4 = problem.result(s3, (4,'L', [[1, 1, 1],[1, 0, 0]]))
+s5 = problem.result(s4, (5,'I', [[1],[1],[1],[1]]))
+# Verificar se foi atingida a solução
+#print("Is goal?", problem.goal_test(s0))
+#print("Is goal?", problem.goal_test(s1))
+#print("Is goal?", problem.goal_test(s2))
+#print("Is goal?", problem.goal_test(s3))
+#print("Is goal?", problem.goal_test(s4))
+#print("Is goal?", problem.goal_test(s5))
+print("Solution:\n", s0.board.print(), sep="")
+print("Solution:\n", s1.board.print(), sep="")
+print("Solution:\n", s2.board.print(), sep="")
+print("Solution:\n", s3.board.print(), sep="")
+print("Solution:\n", s4.board.print(), sep="")
+print("Solution:\n", s5.board.print(), sep="")
