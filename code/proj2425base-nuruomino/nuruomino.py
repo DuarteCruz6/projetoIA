@@ -175,11 +175,15 @@ class Region:
     
     def updateSquares(self):
         self.numSquares = 0
+        numShape = 0
         for cell in self.cells:
             if cell.shape == "":
                 self.numSquares+=1
+            elif cell.shape != "X":
+                #it is a shape, since it is not X or empty
+                numShape+=1
                 
-        if self.numSquares == 0:
+        if self.numSquares == 0 or numShape==4:
             self.flagOccupied = True
         else:
             self.flagOccupied = False
@@ -738,8 +742,6 @@ class Nuruomino(Problem):
         for region in state.board.regionList:
             #print(region.value)
             if not region.isOccupied():
-                #print(region.value)
-                #print("squares",region.numSquares)
                 return False
             
         #checks if every shape is touching
@@ -768,15 +770,16 @@ problem = Nuruomino(board)
 # Criar um estado com a configuração inicial:
 s0 = NuruominoState(board)
 # Aplicar as ações que resolvem a instância
-s1 = problem.result(s0, (1,'L', [[1, 1],[1, 0],[1, 0]]))
-#print("Solution:\n", s1.board.print(), sep="")
-s2 = problem.result(s1, (2,'S', [[1, 0], [1, 1],[0, 1]]))
-#print("Solution:\n", s2.board.print(), sep="")
-s3 = problem.result(s2, (3,'T', [[1, 0],[1, 1],[1, 0]]))
-#print("Solution:\n", s3.board.print(), sep="")
-s4 = problem.result(s3, (4,'L', [[1, 1, 1],[1, 0, 0]]))
-#print("Solution:\n", s4.board.print(), sep="")
-s5 = problem.result(s4, (5,'I', [[1],[1],[1],[1]]))
+s1 = problem.result(s0, (1,
+'L', [[1, 1],[1, 0],[1, 0]]))
+s2 = problem.result(s1, (2,
+'S', [[1, 0], [1, 1],[0, 1]]))
+s3 = problem.result(s2, (3,
+'T', [[1, 0],[1, 1],[1, 0]]))
+s4 = problem.result(s3, (4,
+'L', [[1, 1, 1],[1, 0, 0]]))
+s5 = problem.result(s4, (5,
+'I', [[1],[1],[1],[1]]))
 # Verificar se foi atingida a solução
 print("Is goal?", problem.goal_test(s2))
 print("Is goal?", problem.goal_test(s5))
