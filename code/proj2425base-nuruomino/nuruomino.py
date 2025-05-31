@@ -534,18 +534,60 @@ class Board:
             if row < 0 or col < 0 or row > max or col > max: continue
             new_cell = self.cellList[row][col]
             if cell.getRegionCell() == new_cell.getRegionCell(): adjacent_cells_same_region.append(new_cell)
+            else: adjacent_cells_same_region.append(None)
 
         return adjacent_cells_same_region
-
     
 
-    def getPossibleShapesStartingOnCell(self, region: Region, cell: Cell) -> list[set]:
-        # TODO
-        pass
+    def cellDirection(self, cell1: Cell, cell2: Cell) -> int:
+        '''
+        Returns the direction from cell1 to cell2 if they are adjacent, excluding diagonals.
+
+        Up: 1  
+        Down: -1  
+        Left: 2  
+        Right: -2  
+
+        Returns 0 if the cells are not adjacent.
+        '''
+        row_diff = cell1.getRow() - cell2.getRow()
+        col_diff = cell1.getCol() - cell2.getCol()
+        if abs(row_diff) + abs(col_diff) != 1: return 0 # The cells are not adjacent
+        if row_diff: return row_diff
+        else: return col_diff * 2
+
+
+    def getPossibleShapesStartingOnCell(self, region: Region, cell: Cell) -> list[set[Cell]]:
+        '''
+        This function does not return all possible shapes that include the cell!
+        '''
+
+        # Initialize variables
+        stack = []
+        shape = []
+        shapes = []
+        direction = 0 # up: 1, down: -1, left: 2, right: -2
+        directions = []
+        current_cell = cell
+        depth = 1
+        stack.append(self.getAdjacentCellsSameRegion(current_cell))
+
+        # Search for shapes
+        while stack:
+
+            for next_cell in stack[-1]:
+                if depth < 4:
+                    new_cell = self.getAdjacentCellsSameRegion(current_cell)
+                    direction = self.cellDirection(current_cell, new_cell)
+                    ...
+                else:
+                    # reset directions
+                    ...
         
+            if not stack[-1]: stack.pop()
     
 
-    def fillRegionOverlaps(self, region: Region):
+    def fillRegionOverlap(self, region: Region):
         first_iter = True
         cells = zigzagOrder(region.getCells()) # To fail faster in bigger regions
         overlap = set()
