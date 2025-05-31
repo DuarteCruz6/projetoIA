@@ -110,6 +110,7 @@ class Cell:
         self.row = row #cell's row (x-coordinate)
         self.col = col #cell's column (y-coordinate)
         self.flagOccupied = False #true if the cell is occupied
+        self.restrictions = set() #all shapes that the cell is touching, so the cell cant be
         self.shape = ""  #shape contained in the cell
     
     #used to use this cell but with new reference
@@ -136,6 +137,7 @@ class Cell:
         
     def putShapeCell(self, shape:str) -> None:
         if self.flagOccupied: return False
+        if shape in self.restrictions: return False
         self.shape = shape
         self.flagOccupied = True
         return True
@@ -149,6 +151,14 @@ class Cell:
     def desoccupyCell(self):
         self.flagOccupied = False
         self.shape = ""
+        
+    def addRestriction(self,shape):
+        if self.flagOccupied: return
+        self.restrictions.add(shape)
+        if len(self.restrictions) == 4:
+            #the cell has to be an X
+            self.occupyCell()
+            return 1
 
 #struct Region
 class Region:
@@ -187,6 +197,11 @@ class Region:
             self.flagOccupied = True
         else:
             self.flagOccupied = False
+            
+    def updateRestriction(self):
+        self.numRestrictions = 0
+        for cell in self.cells:
+            self.numRestrictions += len(cell.restrictions)
             
             
     #adds a new cell to the region   
@@ -374,15 +389,26 @@ class Board:
     
     def adjacent_positions(self, row:int, col:int) -> list:
         """Devolve as posições adjacentes à região, em todas as direções, incluindo diagonais."""
-        
-        listAdjacentPos = []
+        listAdjacentPos = self.adjacents_positions_without_diagonals(row,col)
         
         if row!=1: #checks if the cell is on the first row
             if col!=1:
                 listAdjacentPos.append([row-1,col-1]) #top left corner
-            listAdjacentPos.append([row-1,col]) #position above
             if col!=self.size:
                 listAdjacentPos.append([row-1,col+1]) #top right corner
+            
+        if row!=self.size: #checks if the cell is on the last row
+            if col!=1:
+                listAdjacentPos.append([row+1,col-1]) #bottom left corner
+            if col!=self.size:
+                listAdjacentPos.append([row+1,col+1]) #bottom right corner
+        return listAdjacentPos
+    
+    def adjacents_positions_without_diagonals(self, row:int, col:int):
+        listAdjacentPos = []
+        
+        if row!=1: #checks if the cell is on the first row
+            listAdjacentPos.append([row-1,col]) #position above
             
         if col!=1: #checks if the cell is on the left side of the board
                 listAdjacentPos.append([row,col-1]) #position on the left
@@ -391,11 +417,8 @@ class Board:
             listAdjacentPos.append([row,col+1]) #position on the right 
             
         if row!=self.size: #checks if the cell is on the last row
-            if col!=1:
-                listAdjacentPos.append([row+1,col-1]) #bottom left corner
             listAdjacentPos.append([row+1,col]) #position under
-            if col!=self.size:
-                listAdjacentPos.append([row+1,col+1]) #bottom right corner
+            
         return listAdjacentPos
 
     def adjacent_values(self, row:int, col:int) -> list:
@@ -529,8 +552,6 @@ class Board:
         return self.regionList[index]
         
     def shapeRegion(self,regionValue,shape,shapeForm,isToInsert):
-        #if not isToInsert:
-        #    shapeFormOriginal = np.array(shapeForm, copy=True)
         region = self.findRegion(regionValue)
         if region.isOccupied():
             return 
@@ -581,20 +602,36 @@ class Board:
             self.putShapeRegion(bestInfo,region)
             self.updatePriorityQueue()
         else:
-
-            #shapeForm = shapeFormOriginal.copy().tolist()
             return len(possibleSpots) > 0
     
     def putShapeRegion(self,info,region):
         startIndex = info[0]
         shape = info[1]
         shapeForm = info[2]
-        cellsFromOtherRegion,_,_ = region.putShape(startIndex,shape,shapeForm)
+        cellsFromOtherRegion,cellsOccupied,_ = region.putShape(startIndex,shape,shapeForm)
         for (row,col) in cellsFromOtherRegion:
             cell = self.cellList[row-1][col-1]
             cell.occupyCell()
             region = self.findRegion(cell.regionValue)
             region.updateSquares()
+        self.restrictAdjacents(cellsOccupied,shape)
+        
+    def restrictAdjacents(self,cellsOccupied,shape):
+        visited = set()
+        for cell in cellsOccupied:
+            listAdjacentPos = self.adjacents_positions_without_diagonals(cell.row,cell.col)
+            for [row,col] in listAdjacentPos:
+                cell = self.cellList[row-1][col-1]
+                visited.add(cell)
+        
+        for cell in visited:
+            region = self.findRegion(cell.regionValue)
+            if cell.addRestriction(shape) == 1:
+                #the cell is now an X since it has all restrictions
+                region.updateSquares()
+            else:    
+                region.updateRestriction()
+            
     
     def getBestScoreShape(self,possibleSpots):
         #possibleSpots = startIndex,shape,shapeForm,score
@@ -737,25 +774,3 @@ class Nuruomino(Problem):
         # TODO
         pass
         
-    
-# Ler grelha do figura 1a:
-board = Board.parse_instance()
-# Criar uma instância de Nuruomino:
-problem = Nuruomino(board)
-# Criar um estado com a configuração inicial:
-s0 = NuruominoState(board)
-# Aplicar as ações que resolvem a instância
-s1 = problem.result(s0, (1,
-'L', [[1, 1],[1, 0],[1, 0]]))
-s2 = problem.result(s1, (2,
-'S', [[1, 0], [1, 1],[0, 1]]))
-s3 = problem.result(s2, (3,
-'T', [[1, 0],[1, 1],[1, 0]]))
-s4 = problem.result(s3, (4,
-'L', [[1, 1, 1],[1, 0, 0]]))
-s5 = problem.result(s4, (5,
-'I', [[1],[1],[1],[1]]))
-# Verificar se foi atingida a solução
-print("Is goal?", problem.goal_test(s2))
-print("Is goal?", problem.goal_test(s5))
-print("Solution:\n", s5.board.print(), sep="")
