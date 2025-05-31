@@ -217,6 +217,8 @@ class Region:
         beginningCol = firstCell.getCol()
         cellsFromOtherRegions = []
         cellsOccupied = []
+        cellsWithX = []
+        cellsFilledWithShape = []
         for r in shapeForm:
             colNow = beginningCol
             for c in r:
@@ -225,12 +227,13 @@ class Region:
                     cell = self.findCell(rowNow,colNow)
                     
                     if cell == None:
-                        return [],cellsOccupied,worked
+                        return [],cellsOccupied,worked,[],[]
                     if not cell.putShapeCell(shape):
                         self.desoccupyCells(cellsOccupied)
-                        return [],cellsOccupied,worked
+                        return [],cellsOccupied,worked,[],[]
                     else:
                         cellsOccupied.append(cell)
+                        cellsFilledWithShape.append(cell)
                         self.updateSquares()
                         
                 elif c == "X":
@@ -243,9 +246,10 @@ class Region:
                         if not cell.occupyCell():
                             #the cell was already occupied
                             self.desoccupyCells(cellsOccupied)
-                            return [],cellsOccupied,worked
+                            return [],cellsOccupied,worked,[],[]
                         else:
                             cellsOccupied.append(cell)
+                            cellsWithX.append(cell)
                             self.updateSquares()
                 colNow+=1
             rowNow+=1
@@ -253,7 +257,7 @@ class Region:
         self.flagOccupied = True
         self.numSquares = 0
         self.numRestrictions = 0
-        return cellsFromOtherRegions,cellsOccupied,worked
+        return cellsFromOtherRegions,cellsOccupied,worked,cellsFilledWithShape,cellsWithX
 
     def desoccupyCells(self,cellsOccupied):
         for cell in cellsOccupied:
@@ -575,7 +579,7 @@ class Board:
     def shapeRegion(self,regionValue,shape,shapeForm,isToInsert):
         region = self.findRegion(regionValue)
         if region.isOccupied():
-            return 
+            return False, [], []
         if shape in ["L","S","T"]:
             crosses = self.findCrosses(shapeForm)
             if(crosses):
@@ -586,6 +590,8 @@ class Board:
         startIndex = -1
         maxIndex = len(region.cells)
         stop = False
+        cellsWithShape = []
+        cellsWithX = []
         while startIndex<maxIndex:   
             worked = False
             while not worked:
@@ -594,7 +600,7 @@ class Board:
                 if startIndex == maxIndex:
                     stop = True 
                     break   
-                cellsFromOtherRegion,cellsOccupied,worked = region.putShape(startIndex,shape,shapeForm)
+                cellsFromOtherRegion,cellsOccupied,worked,cellsFilledWithShape,cellsFilledWithX = region.putShape(startIndex,shape,shapeForm)
                 if not worked: 
                     self.desocuppyCells(cellsOccupied)
                 
@@ -617,6 +623,7 @@ class Board:
                             desocupyFlag = True
                             break
                         else:
+                            cellsFilledWithX.append(cell)
                             cellsOccupied.append(cell)
                             regionToRemove = self.findRegion(cell.regionValue)
                             regionToRemove.updateSquares()
@@ -627,13 +634,19 @@ class Board:
                     score = len(cellsFromOtherRegion) #the less the better
                     possibleSpots.append(((startIndex,shape,shapeForm),score))
                     self.desocuppyCells(cellsOccupied)
+                    for cell in cellsFilledWithShape:
+                        cellsWithShape.append(cell)
+                    for cell in cellsFilledWithX:
+                        cellsWithX.append(cell)
 
         if isToInsert and len(possibleSpots) > 0:      
             bestInfo = self.getBestScoreShape(possibleSpots)
             self.putShapeRegion(bestInfo,region)
             self.updatePriorityQueue()
         else:
-            return len(possibleSpots) > 0
+            if len(possibleSpots) > 0:
+                return True, cellsWithShape, cellsWithX
+            return False, [], []
         
     def madeSquares(self,cellsOccupied):
         max = self.size-1
@@ -680,7 +693,7 @@ class Board:
         startIndex = info[0]
         shape = info[1]
         shapeForm = info[2]
-        cellsFromOtherRegion,cellsOccupied,_ = region.putShape(startIndex,shape,shapeForm)
+        cellsFromOtherRegion,cellsOccupied,_,_,_ = region.putShape(startIndex,shape,shapeForm)
         for (row,col) in cellsFromOtherRegion:
             cell = self.cellList[row-1][col-1]
             cell.occupyCell()
@@ -781,18 +794,45 @@ class Nuruomino(Problem):
         partir do estado passado como argumento."""
         board = state.board
         listActions = []
+        overlappedCellsShape = []
+        overlappedCellsX = []
+        cellsShapeDict = {}
         for region in board.regionList:
             if region.numSquares == 4:
                 #we can simply put the supposed piece, since it is a 4 piece region
                 action = region.getShape() #action = (shape,shapeForm)
                 listActions.append((region.value,action))
             else:
+                #print("for region",region.value)
                 #the region has more than 4 squares, so we need to test each shape and shapeForm
+                firstFlag = True
                 for shape in shapeDict:
                     for shapeForm in shapeDict[shape]:
-                        worked = board.shapeRegion(region.value,shape,[row[:] for row in shapeForm],False)  
+                        worked, cellsWithShape, cellsWithX = board.shapeRegion(region.value,shape,[row[:] for row in shapeForm],False)  
                         if worked:
                             listActions.append((region.value,(shape,shapeForm)))
+                            if firstFlag:
+                                firstFlag = False
+                                overlappedCellsShape = cellsWithShape
+                                overlappedCellsX = cellsWithX
+                                for cell in overlappedCellsShape:
+                                   cellsShapeDict[cell] = [shape]
+                            else:
+                                #check for overlaps in shaped  cells
+                                overlappedCellsShape = [cell for cell in overlappedCellsShape if cell in cellsWithShape]
+                                for cell in overlappedCellsShape:
+                                    if shape not in cellsShapeDict[cell]:
+                                        cellsShapeDict[cell].append(shape)
+                                        
+                                #check for overlap in X cells
+                                overlappedCellsX = [cell for cell in overlappedCellsX if cell in cellsWithX]
+                                        
+            #print("found shape overlap at:")   
+            #for cell in overlappedCellsShape:
+            #    print(cell.row,cell.col, "with shapes", cellsShapeDict[cell])
+            #print("found X overlap at:")   
+            #for cell in overlappedCellsX:
+            #    print(cell.row,cell.col)
         return listActions       
 
     def result(self, state: NuruominoState, action):
@@ -863,15 +903,6 @@ s3 = problem.result(s2, (3,'T', [[1, 0],[1, 1],[1, 0]]))
 s4 = problem.result(s3, (4,'L', [[1, 1, 1],[1, 0, 0]]))
 s5 = problem.result(s4, (5,'I', [[1],[1],[1],[1]]))
 # Verificar se foi atingida a solução
-#print("Is goal?", problem.goal_test(s0))
-#print("Is goal?", problem.goal_test(s1))
-#print("Is goal?", problem.goal_test(s2))
-#print("Is goal?", problem.goal_test(s3))
-#print("Is goal?", problem.goal_test(s4))
-#print("Is goal?", problem.goal_test(s5))
-print("Solution:\n", s0.board.print(), sep="")
-print("Solution:\n", s1.board.print(), sep="")
-print("Solution:\n", s2.board.print(), sep="")
-print("Solution:\n", s3.board.print(), sep="")
-print("Solution:\n", s4.board.print(), sep="")
+print("Is goal?", problem.goal_test(s2))
+print("Is goal?", problem.goal_test(s5))
 print("Solution:\n", s5.board.print(), sep="")
