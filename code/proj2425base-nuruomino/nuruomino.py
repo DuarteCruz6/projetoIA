@@ -295,10 +295,12 @@ class Region:
         cols = []
         perCol = {}
         perRow = {}
+        cellsCoords = []
         for cell in self.cells:
             row = cell.row
             col = cell.col
             if cell.shape == "":
+                cellsCoords.append((row,col))
                 if row not in rows:
                     perRow[row] = 1
                     rows.append(row)
@@ -331,33 +333,26 @@ class Region:
                 
         if shape == "": shape = "S"
         
-        shapeForm = self.generate_shapeForm(perRow,perCol)
+        shapeForm = self.generate_shapeForm(cellsCoords)
         return (shape,shapeForm)
     
-    def generate_shapeForm(self, row_dict, col_dict):
-        # Sort row and column indices for consistent ordering
-        rows = sorted(row_dict.keys())
-        cols = sorted(col_dict.keys())
-
-        # Initialize empty grid with 0s
-        shapeForm = [[0 for _ in cols] for _ in rows]
-
-        # Create lists of how many cells need to be filled per column
-        remaining_cols = {c: col_dict[c] for c in cols}
-
-        for i, r in enumerate(rows):
-            # Get number of cells to fill in this row
-            fill = row_dict[r]
-
-            # Sort columns by how many filled cells are still needed (desc)
-            sorted_cols = sorted(cols, key=lambda c: -remaining_cols[c])
-
-            for c in sorted_cols:
-                if fill > 0 and remaining_cols[c] > 0:
-                    j = cols.index(c)
-                    shapeForm[i][j] = 1
-                    fill -= 1
-                    remaining_cols[c] -= 1
+    def generate_shapeForm(self,cellsCoords):
+        
+        minRow = min([row for (row,_) in cellsCoords])
+        maxRow = max([row for (row,_) in cellsCoords])
+        minCol = min([col for (_,col) in cellsCoords])
+        maxCol = max([col for (_,col) in cellsCoords])
+        
+        shapeForm = []
+        for r in range(minRow,maxRow+1):
+            row = []
+            for c in range(minCol,maxCol+1):
+                if (r,c) in cellsCoords:
+                    row.append(1)
+                else:
+                    row.append(0)
+            shapeForm.append(row)
+                    
         return shapeForm
                     
                          
