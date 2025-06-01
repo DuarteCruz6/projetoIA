@@ -103,6 +103,59 @@ shapeDict=  {
                     ]
             }
 
+
+####################### Auxiliar Functions #######################
+
+def zigzagOrder(lst: list) -> list:
+    '''
+    [1, 2, 3, 4] -> [1, 4, 2, 3]\n
+    [1, 2, 3, 4, 5, 6, 7] -> [1, 7, 2, 6, 3, 5, 4]
+    '''
+    zigzag_order = []
+    i = 0
+    j = len(lst) - 1
+
+    while i < j:
+        zigzag_order.append(lst[i])
+        zigzag_order.append(lst[j])
+        i += 1
+        j -= 1
+    
+    if i == j: zigzag_order.append(lst[i])
+
+    return zigzag_order
+
+
+def allEqual(lst: list|tuple) -> bool:
+    if not lst: return True
+    last_elem = lst[0]
+    for elem in lst:
+        if elem != last_elem: return False
+    return True
+
+
+def whichShape(directions: list[int]) -> str:
+    '''
+    This function cannot recognise the T shape! 
+    '''
+    if len(directions) != 3: return ""
+
+    if allEqual(directions): return "I"
+    elif directions[0] == directions[-1]: return "S"
+    elif directions[0] == directions[1] or directions[-1] == directions[-2]: return "L"
+    else: return ""
+
+
+def shapesTypesSetToStr(shapes: set) -> str:
+    shapes_str = ""
+    shape_types = "LITS"
+    for shape_type in shape_types:
+        if shape_type in shapes: shapes_str += shape_type
+    return shapes_str
+
+##################################################################
+
+
 #struct Cell
 class Cell:
     def __init__(self, regionValue:int, row:int, col:int):
@@ -782,7 +835,116 @@ class Board:
                 if shapeForm[rowNum+1][colNum-1] == 1:
                     return True
         return False
+    
+
+
+    def getAdjacentCellsSameRegion(self, cell: Cell, exclude: list[Cell] = []):
+        adjacent_cells_same_region = []
+        row_var = -1, 0, 1, 0
+        col_var = 0, 1, 0, -1
+        max = self.size - 1
+
+        # Check up, right, down and left, respectively
+        for i in range(4):
+            row = cell.getRow() + row_var[i]
+            col = cell.getCol() + col_var[i]
+            if row < 0 or col < 0 or row > max or col > max: continue
+            new_cell = self.cellList[row][col]
+            if cell.getRegionCell() == new_cell.getRegionCell() and new_cell not in exclude:
+                adjacent_cells_same_region.append(new_cell)
+
+        return adjacent_cells_same_region
+    
+
+    def cellDirection(self, cell1: Cell, cell2: Cell) -> int:
+        '''
+        Returns the direction from cell1 to cell2 if they are adjacent, excluding diagonals.
+
+        Up: 1  
+        Down: -1  
+        Left: 2  
+        Right: -2  
+
+        Returns 0 if the cells are not adjacent.
+        '''
+        row_diff = cell1.getRow() - cell2.getRow()
+        col_diff = cell1.getCol() - cell2.getCol()
+        if abs(row_diff) + abs(col_diff) != 1: return 0 # The cells are not adjacent
+        if row_diff: return row_diff
+        else: return col_diff * 2
+
+
+    def getPossibleShapesStartingOnCell(self, cell: Cell) -> list[tuple[str, set[Cell]]]: # example: [("L", {c1, c2, c3, c4}), ("I", {c2, c3, c4, c5}), ...]
+        '''
+        This function does not return all possible shapes that include the cell!
+        '''
+
+        # Initialize variables
+        stack = []
+        shapes = []
+        direction = 0 # up: 1, down: -1, left: 2, right: -2
+        directions = [] # Directions are used to determine the shape
+        current_cell = cell
+        shape = [current_cell]
+        num_cells = 1
+        possible_T_verified = set()
+        stack.append(self.getAdjacentCellsSameRegion(current_cell))
+
+        # Search for shapes
+        while stack:
+
+            if num_cells == 4:
+                shape_type = whichShape(directions)
+                if shape_type in "LITS":
+                    new_elem = (shape_type, set(shape))
+                    if new_elem not in shapes: shapes.append(new_elem)
+                if directions: directions.pop()
+                shape.pop()
+                num_cells -= 1
+                if shape: current_cell = shape[-1]
+
+            elif not stack[-1]:
+                stack.pop()
+                if directions: directions.pop()
+                shape.pop()
+                num_cells -= 1
+                if shape: current_cell = shape[-1]
+
+            elif num_cells == 3 and allEqual(directions) and shape not in possible_T_verified: # Try to add T shapes
+                possible_T_verified.add(shape)
+                possible_cells = self.getAdjacentCellsSameRegion(shape[-2], shape)
+                for possible_cell in possible_cells:
+                    t_shape = shape
+                    t_shape.append(possible_cell)
+                    shapes.append(("T", set(t_shape)))
+
+            else:
+                direction = self.cellDirection(current_cell, stack[-1][-1])
+                assert direction != 0
+                current_cell = stack[-1][-1]
+                stack[-1].pop()
+                shape.append(current_cell)
+                num_cells += 1
+                if num_cells < 4: stack.append(self.getAdjacentCellsSameRegion(current_cell, shape))
+
+        return shapes
+
+        
+        
+    def possibleShapes(self, region: Region):
+        '''
+        Returns a list of (shape, shapeForm, cellsWithShape, cellsWithX)
+        '''
+        possible_shapes = []
+        region_cells = region.getCells()
+
+        for cell in region_cells:
+            possible_shapes.append(self.getPossibleShapesStartingOnCell(cell))
+
+        return possible_shapes
                 
+
+
 
 class Nuruomino(Problem):
     def __init__(self, board: Board):
