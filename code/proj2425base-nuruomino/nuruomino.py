@@ -544,20 +544,22 @@ class Board:
     def adjacent_regions(self, regionValue:int) -> list:
         """Devolve uma lista das regiões que fazem fronteira com a região enviada no argumento."""
         listAdjacentRegions = []
-        for region in self.regionList:
-            if region.getValue() == regionValue:
-                #found the region
-                for cell in region.getCells():
-                    #goes through every cell in the region and gets all region values of adjacent cells of the current cell
-                    listAdjacentValues = self.adjacent_values(cell.getRow(),cell.getCol()) 
-                    for value in listAdjacentValues:
-                        value = int(value)
-                        #goes through every region value
-                        if value != regionValue and value not in listAdjacentRegions:
-                            #adds the value if it wasnt added before and if it is different than the region that the current cell is in
-                            listAdjacentRegions.append(value)
-                break
-                    
+        region = board.findRegion(regionValue)
+        adjacentCells = set()
+        
+        for cell in region.getCells():
+            #gets every adjacent cell, not repeteaded
+            listAdjacentPositions = self.adjacent_positions(cell.row,cell.col)
+            for pos in listAdjacentPositions:
+                adjacentCells.add(pos)
+        
+        for row,col in adjacentCells:
+            value = self.get_value(row,col)
+            value = int(value)
+            if value != regionValue and value not in listAdjacentRegions:
+                #adds the value if it wasnt added before and if it is different than the region that the current cell is in
+                listAdjacentRegions.append(value)
+        
         return sorted(listAdjacentRegions) #returns it sorted in ascending order [5,2,4,1] -> [1,2,4,5]
     
     def adjacent_positions(self, row:int, col:int) -> list:
