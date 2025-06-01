@@ -139,6 +139,8 @@ def whichShape(directions: list[int]) -> str:
     if len(directions) == 3 and allEqual(directions): return "I"
     elif len(directions) == 3 and directions[0] == directions[-1]: return "S"
     elif len(directions) == 3 and (directions[0] == directions[1] or directions[-1] == directions[-2]): return "L"
+    elif len(directions) == 5 and (directions[0] == directions[1] and directions[2] == -directions[0]
+        and abs(directions[-1]) != abs(directions[0])): return "T"
     else: return ""
 
 
