@@ -31,6 +31,34 @@ def zigzagOrder(lst: list) -> list:
 
     return zigzag_order
 
+
+def allEqual(lst: list|tuple) -> bool:
+    if not lst: return True
+    last_elem = lst[0]
+    for elem in lst:
+        if elem != last_elem: return False
+    return True
+
+
+def whichShape(directions: list[int]) -> str:
+    '''
+    This function cannot recognise the T shape! 
+    '''
+    if len(directions) != 3: return ""
+
+    if allEqual(directions): return "I"
+    elif directions[0] == directions[-1]: return "S"
+    elif directions[0] == directions[1] or directions[-1] == directions[-2]: return "L"
+    else: return ""
+
+
+def shapesTypesSetToStr(shapes: set) -> str:
+    shapes_str = ""
+    shape_types = "LITS"
+    for shape_type in shape_types:
+        if shape_type in shapes: shapes_str += shape_type
+    return shapes_str
+
 ##################################################################
 
 
@@ -520,8 +548,9 @@ class Board:
                     return True
         return False
     
+
     
-    def getAdjacentCellsSameRegion(self, cell: Cell):
+    def getAdjacentCellsSameRegion(self, cell: Cell, exclude: list[Cell] = []):
         adjacent_cells_same_region = []
         row_var = -1, 0, 1, 0
         col_var = 0, 1, 0, -1
@@ -533,8 +562,8 @@ class Board:
             col = cell.getCol() + col_var[i]
             if row < 0 or col < 0 or row > max or col > max: continue
             new_cell = self.cellList[row][col]
-            if cell.getRegionCell() == new_cell.getRegionCell(): adjacent_cells_same_region.append(new_cell)
-            else: adjacent_cells_same_region.append(None)
+            if cell.getRegionCell() == new_cell.getRegionCell() and new_cell not in exclude:
+                adjacent_cells_same_region.append(new_cell)
 
         return adjacent_cells_same_region
     
@@ -557,48 +586,87 @@ class Board:
         else: return col_diff * 2
 
 
-    def getPossibleShapesStartingOnCell(self, region: Region, cell: Cell) -> list[set[Cell]]:
+    def getPossibleShapesStartingOnCell(self, cell: Cell) -> list[tuple[str, set[Cell]]]: # example: [("L", {c1, c2, c3, c4}), ("I", {c2, c3, c4, c5}), ...]
         '''
         This function does not return all possible shapes that include the cell!
         '''
 
         # Initialize variables
         stack = []
-        shape = []
         shapes = []
         direction = 0 # up: 1, down: -1, left: 2, right: -2
-        directions = []
+        directions = [] # Directions are used to determine the shape
         current_cell = cell
-        depth = 1
+        shape = [current_cell]
+        num_cells = 1
+        possible_T_verified = set()
         stack.append(self.getAdjacentCellsSameRegion(current_cell))
 
         # Search for shapes
         while stack:
 
-            for next_cell in stack[-1]:
-                if depth < 4:
-                    new_cell = self.getAdjacentCellsSameRegion(current_cell)
-                    direction = self.cellDirection(current_cell, new_cell)
-                    ...
-                else:
-                    # reset directions
-                    ...
-        
-            if not stack[-1]: stack.pop()
+            if num_cells == 4:
+                shape_type = whichShape(directions)
+                if shape_type in "LITS":
+                    new_elem = (shape_type, set(shape))
+                    if new_elem not in shapes: shapes.append(new_elem)
+                if directions: directions.pop()
+                shape.pop()
+                num_cells -= 1
+                if shape: current_cell = shape[-1]
+
+            elif not stack[-1]:
+                stack.pop()
+                if directions: directions.pop()
+                shape.pop()
+                num_cells -= 1
+                if shape: current_cell = shape[-1]
+
+            elif num_cells == 3 and allEqual(directions) and shape not in possible_T_verified: # Try to add T shapes
+                possible_T_verified.add(shape)
+                possible_cells = self.getAdjacentCellsSameRegion(shape[-2], shape)
+                for possible_cell in possible_cells:
+                    t_shape = shape
+                    t_shape.append(possible_cell)
+                    shapes.append(("T", set(t_shape)))
+
+            else:
+                direction = self.cellDirection(current_cell, stack[-1][-1])
+                assert direction != 0
+                current_cell = stack[-1][-1]
+                stack[-1].pop()
+                shape.append(current_cell)
+                num_cells += 1
+                if num_cells < 4: stack.append(self.getAdjacentCellsSameRegion(current_cell, shape))
+
+        return shapes
     
 
+
     def fillRegionOverlap(self, region: Region):
+        '''
+        Calculates all possible shapes that fit in the region and adds to the board the cells that are present in all shapes
+        '''
         first_iter = True
-        cells = zigzagOrder(region.getCells()) # To fail faster in bigger regions
+        region_cells = zigzagOrder(region.getCells()) # To fail faster in bigger regions
         overlap = set()
-        for cell in cells:
-            possible_shapes = self.getPossibleShapesStartingOnCell(region, cell)
-            if first_iter:
-                overlap = set(possible_shapes[0]) # It can't cause an exception because the first cell will always find a shape
-                first_iter = False
-            for cells_set in possible_shapes:
-                overlap = overlap & cells_set
-                if not overlap: return # No overlap on the region, stop searching
+        shape_types = set()
+
+        # Calculate the overlap
+        for cell in region_cells:
+            possible_shapes = self.getPossibleShapesStartingOnCell(cell)
+            for shape in possible_shapes:
+                shape_type, cells = shape
+                shape_types.add(shape_type)
+                if first_iter:
+                    overlap = cells
+                    first_iter = False
+                    continue
+                overlap = overlap.intersection(cells)
+                if not overlap: return
+
+        # Apply to the board
+        for cell in overlap: cell.putShapeCell(shapesTypesSetToStr(shape_types)) # ? É assim que se faz?
 
 
 
