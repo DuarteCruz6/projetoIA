@@ -15,79 +15,79 @@ shapeDict=  {
                 "L":[   
                         [
                             [1,0],
-                            [1,0],
+                            [1,"X"],
                             [1,1]
                         ],
                         [
                             [1,1],
-                            [1,0],
+                            [1,"X"],
                             [1,0]
                         ],
                         [
                             [0,1],
-                            [0,1],
+                            ["X",1],
                             [1,1]
                         ],
                         [
                             [1,1],
-                            [0,1],
+                            ["X",1],
                             [0,1]
                         ],
                         [
                             [1,1,1],
-                            [1,0,0]
+                            [1,"X",0]
                         ],
                         [
                             [1,1,1],
-                            [0,0,1]
+                            [0,"X",1]
                         ],
                         [
-                            [1,0,0],
+                            [1,"X",0],
                             [1,1,1]
                         ],
                         [
-                            [0,0,1],
+                            [0,"X",1],
                             [1,1,1]
                         ]
                     ],
                 "T":[
                         [
-                            [0,1,0],
+                            ["X",1,"X"],
                             [1,1,1]
                         ],
                         [
                             [1,1,1],
-                            [0,1,0]
+                            ["X",1,"X"]
                         ],
                         [
-                            [1,0],
+                            [1,"X"],
                             [1,1],
-                            [1,0]
+                            [1,"X"]
                         ],
                         [
-                            [0,1],
+                            ["X",1],
                             [1,1],
-                            [0,1]
+                            ["X",1]
                         ]
                     ],
                 "S":[
                         [
-                            [1,0],
+                            [1,"X"],
                             [1,1],
-                            [0,1]
+                            ["X",1]
                         ],
                         [
-                            [0,1],
+                            ["X",1],
                             [1,1],
-                            [1,0]
+                            [1,"X"]
                         ],
                         [
-                            [0,1,1],
-                            [1,1,0]
+                            ["X",1,1],
+                            [1,1,"X"]
                         ],
                         [
-                            [1,1,0],
-                            [0,1,1]
+                            [1,1,"X"],
+                            ["X",1,1]
                         ]
                     ],
                 "I":[
@@ -102,6 +102,7 @@ shapeDict=  {
                         ]
                     ]
             }
+
 
 
 ####################### Auxiliar Functions #######################
@@ -135,14 +136,9 @@ def allEqual(lst: list|tuple) -> bool:
 
 
 def whichShape(directions: list[int]) -> str:
-    '''
-    This function cannot recognise the T shape! 
-    '''
-    if len(directions) != 3: return ""
-
-    if allEqual(directions): return "I"
-    elif directions[0] == directions[-1]: return "S"
-    elif directions[0] == directions[1] or directions[-1] == directions[-2]: return "L"
+    if len(directions) == 3 and allEqual(directions): return "I"
+    elif len(directions) == 3 and directions[0] == directions[-1]: return "S"
+    elif len(directions) == 3 and (directions[0] == directions[1] or directions[-1] == directions[-2]): return "L"
     else: return ""
 
 
@@ -153,7 +149,76 @@ def shapesTypesSetToStr(shapes: set) -> str:
         if shape_type in shapes: shapes_str += shape_type
     return shapes_str
 
+
+def addPaddingRows(shape_form: list[list], left_padding: bool):
+    # Get max length
+    length = 0
+    for row in shape_form:
+        l = len(row)
+        if l > length: length = l
+
+    # Add padding
+    for row in shape_form:
+        if len(row) == length: continue
+        if left_padding: row.insert(0, 0)
+        else: row.append(0)
+
+
+def createShapeForm(directions: list[int]) -> list[list]:
+    shape_form = [[1]]
+    row = 0
+    col = 0
+    
+    for direction in directions:
+
+        # Up
+        if direction == 1:
+            if row == 0: shape_form.insert(0, [0] * len(shape_form[row])) # Create a new row at the top
+            else: row -= 1
+            shape_form[row][col] = 1
+
+        # Down
+        elif direction == -1:
+            if row == len(shape_form) - 1: shape_form.append([0] * len(shape_form[row]))
+            row += 1
+            shape_form[row][col] = 1
+
+        # Left
+        elif direction == 2:
+            if col == 0: shape_form[row].insert(0, 1)
+            else: col -= 1
+            addPaddingRows(shape_form, True)
+
+        # Right
+        elif direction == -2:
+            if col == len(shape_form[row]) - 1: shape_form[row].append(1)
+            col += 1
+            addPaddingRows(shape_form, False)
+
+    # Add the crosses
+    row_var = -1, -1,  0,  1,  1,  1,  0, -1
+    col_var =  0,  1,  1,  1,  0, -1, -1,  0
+    row_max = len(shape_form) - 1
+    for row in range(len(shape_form)):
+        col_max = len(shape_form[row]) - 1
+        for col in range(len(shape_form[row])):
+            if shape_form[row][col] == 1: continue
+            streak = 0
+            for i in range(len(row_var)):
+                row_adj = row + row_var[i]
+                col_adj = col + col_var[i]
+                if row_adj < 0 or col_adj < 0 or row_adj > row_max or col_adj > col_max: continue
+                if streak == 0 and abs(row_var[i]) + abs(col_var[i]) == 2: continue # To avoiding starting to count occupied cells in the corner
+                if shape_form[row_adj][col_adj] == 1: streak += 1
+
+                if streak == 3:
+                    shape_form[row][col] = "X"
+                    break
+
+    return shape_form
+
 ##################################################################
+
 
 
 #struct Cell
@@ -171,7 +236,7 @@ class Cell:
         copied = Cell(self.regionValue, self.row, self.col)
         copied.flagOccupied = self.flagOccupied
         copied.shape = self.shape
-        copied.restrictions = self.restrictions
+        copied.restrictions = self.restrictions.copy()
         return copied
     
     def getRow(self) -> int:
@@ -184,13 +249,12 @@ class Cell:
         return self.regionValue
         
     def occupyCell(self) -> bool:
-        if self.flagOccupied: return False
         self.flagOccupied = True
         self.shape = "X"
         return True
         
-    def putShapeCell(self, shape:str) -> None:
-        if self.flagOccupied: return False
+    def putShapeCell(self, shape:str) -> bool:
+        if self.flagOccupied:return False
         if shape in self.restrictions: return False
         self.shape = shape
         self.flagOccupied = True
@@ -266,12 +330,23 @@ class Region:
     def putShape(self,startIndex,shape,shapeForm) -> None:
         worked = False
         firstCell = self.cells[startIndex]
-        rowNow = firstCell.getRow()
-        beginningCol = firstCell.getCol()
         cellsFromOtherRegions = []
         cellsOccupied = []
         cellsWithX = []
         cellsFilledWithShape = []
+        
+        for i, row in enumerate(shapeForm):
+            for j, val in enumerate(row):
+                if val == 1:
+                    offset_row = i
+                    offset_col = j
+                    break
+            if offset_row is not None:
+                break
+        
+        rowNow = firstCell.getRow() - offset_row
+        beginningCol = firstCell.getCol() - offset_col
+
         for r in shapeForm:
             colNow = beginningCol
             for c in r:
@@ -282,7 +357,7 @@ class Region:
                     if cell == None:
                         return [],cellsOccupied,worked,[],[]
                     if not cell.putShapeCell(shape):
-                        self.desoccupyCells(cellsOccupied)
+                        self.desoccupyCells(cellsOccupied) 
                         return [],cellsOccupied,worked,[],[]
                     else:
                         cellsOccupied.append(cell)
@@ -325,13 +400,13 @@ class Region:
     
     #calculates the score for the priority queue
     def calculateScore(self) -> int:
-        return self.numSquares - self.numRestrictions
+        return self.numSquares - self.numRestrictions*0.25
 
     def isOccupied(self) -> bool:
         return self.flagOccupied
     
     def getShape(self):
-        #return the shape for the 4 squares regions
+        #return the shape and shapeForm for the 4 squares regions
         diffRows = 0
         rows = []
         diffCols = 0
@@ -339,45 +414,69 @@ class Region:
         perCol = {}
         perRow = {}
         for cell in self.cells:
+            row = cell.row
+            col = cell.col
             if cell.shape == "":
-                if cell.row not in rows:
-                    perRow[diffRows] = 1
-                    rows.append(cell.row)
+                if row not in rows:
+                    perRow[row] = 1
+                    rows.append(row)
                     diffRows += 1
                 else:
-                    index = rows.index(cell.row)
-                    perRow[index] += 1
-                if cell.col not in cols:
-                    perCol[diffCols] = 1
-                    cols.append(cell.col)
+                    perRow[row] += 1
+                if col not in cols:
+                    perCol[col] = 1
+                    cols.append(col)
                     diffCols += 1
                 else:
-                    index = cols.index(cell.col)
-                    perCol[index] += 1
+                    perCol[col] += 1
+                    
+        perRow = dict(sorted(perRow.items()))
+        perCol = dict(sorted(perCol.items()))
             
         shape = ""
         if diffRows==4 or diffCols==4:
             shape = "I"
-        
+
         if perRow[max(perRow, key=perRow.get)] == 3 or perCol[max(perCol, key=perCol.get)] == 3:
             #either a L or T
-            if perRow[1] == 2 or perCol[1] == 2:
+            indexRow = list(perRow.keys())[1]
+            indexCol = list(perCol.keys())[1]
+            if perRow[indexRow] == 2 or perCol[indexCol] == 2:
                 #the middle row/col has 2 cells, so it is a T
                 shape = "T"
             else:
                 shape = "L"
+                
         if shape == "": shape = "S"
-        shapeForm = []
-        for row in perRow:
-            rowForm = []
-            for col in perCol:
-                if perCol[col] != 0:
-                    rowForm.append(1)
-                    perCol[col]-=1
-                else: 
-                    rowForm.append(0)
-            shapeForm.append(rowForm)
+        
+        shapeForm = self.generate_shapeForm(perRow,perCol)
         return (shape,shapeForm)
+    
+    def generate_shapeForm(self, row_dict, col_dict):
+        # Sort row and column indices for consistent ordering
+        rows = sorted(row_dict.keys())
+        cols = sorted(col_dict.keys())
+
+        # Initialize empty grid with 0s
+        shapeForm = [[0 for _ in cols] for _ in rows]
+
+        # Create lists of how many cells need to be filled per column
+        remaining_cols = {c: col_dict[c] for c in cols}
+
+        for i, r in enumerate(rows):
+            # Get number of cells to fill in this row
+            fill = row_dict[r]
+
+            # Sort columns by how many filled cells are still needed (desc)
+            sorted_cols = sorted(cols, key=lambda c: -remaining_cols[c])
+
+            for c in sorted_cols:
+                if fill > 0 and remaining_cols[c] > 0:
+                    j = cols.index(c)
+                    shapeForm[i][j] = 1
+                    fill -= 1
+                    remaining_cols[c] -= 1
+        return shapeForm
                     
                          
 
@@ -615,8 +714,10 @@ class Board:
         lowestScore = 0
         index = 0
         indexNow = 0
+        found = False
         for priority in self.priorityQueueScores:
             if priority>0:
+                found = True
                 if(lowestScore == 0 or priority<lowestScore):
                     lowestScore = priority
                     index = indexNow
@@ -627,17 +728,13 @@ class Board:
                     if(regionNow.numSquares < regionWinning.numSquares):
                         index = indexNow
             indexNow+=1
-        return self.regionList[index]
+        if found:return self.regionList[index]
+        else: return False
         
     def shapeRegion(self,regionValue,shape,shapeForm,isToInsert):
         region = self.findRegion(regionValue)
         if region.isOccupied():
             return False, [], []
-        if shape in ["L","S","T"]:
-            crosses = self.findCrosses(shapeForm)
-            if(crosses):
-                for (r,c) in crosses:
-                    shapeForm[r][c] = "X"
                     
         possibleSpots = []
         startIndex = -1
@@ -652,7 +749,7 @@ class Board:
                 startIndex+=1   
                 if startIndex == maxIndex:
                     stop = True 
-                    break   
+                    break  
                 cellsFromOtherRegion,cellsOccupied,worked,cellsFilledWithShape,cellsFilledWithX = region.putShape(startIndex,shape,shapeForm)
                 if not worked: 
                     self.desocuppyCells(cellsOccupied)
@@ -661,7 +758,7 @@ class Board:
                 desocupyFlag = False
                 
                 #checks if there were any squares made, desocupyFlag = True if so
-                desocupyFlag = self.madeSquares(cellsOccupied)
+                desocupyFlag = self.madeSquares(cellsFilledWithShape)
                 
                 if desocupyFlag:
                     #made a square
@@ -702,7 +799,7 @@ class Board:
             return False, [], []
         
     def madeSquares(self,cellsOccupied):
-        max = self.size-1
+        max = self.size
         for cell in cellsOccupied:
             #we need to check above, under, right and left values
             row = cell.row
@@ -746,13 +843,13 @@ class Board:
         startIndex = info[0]
         shape = info[1]
         shapeForm = info[2]
-        cellsFromOtherRegion,cellsOccupied,_,_,_ = region.putShape(startIndex,shape,shapeForm)
+        cellsFromOtherRegion,_,_,cellsFilledWithShape,_ = region.putShape(startIndex,shape,shapeForm)
         for (row,col) in cellsFromOtherRegion:
             cell = self.cellList[row-1][col-1]
             cell.occupyCell()
             region = self.findRegion(cell.regionValue)
             region.updateSquares()
-        self.restrictAdjacents(cellsOccupied,shape)
+        self.restrictAdjacents(cellsFilledWithShape,shape)
         
     def restrictAdjacents(self,cellsOccupied,shape):
         visited = set()
@@ -787,6 +884,217 @@ class Board:
             region = self.findRegion(cell.regionValue)
             region.updateSquares()
        
+    def isCross(self,shapeForm,rowNum,colNum):
+        if shapeForm[rowNum-1][colNum] == 1:
+            if shapeForm[rowNum][colNum+1] == 1:
+                if shapeForm[rowNum-1][colNum+1] == 1:
+                    return True
+            if shapeForm[rowNum][colNum-1] == 1:
+                if shapeForm[rowNum-1][colNum-1] == 1:
+                    return True
+        if shapeForm[rowNum+1][colNum] == 1:
+            if shapeForm[rowNum][colNum+1] == 1:
+                if shapeForm[rowNum+1][colNum+1] == 1:
+                    return True
+            if shapeForm[rowNum][colNum-1] == 1:
+                if shapeForm[rowNum+1][colNum-1] == 1:
+                    return True
+        return False
+    
+    def verifyConnectivity(self):
+        rows = self.size
+        cols = self.size
+        
+        for r in range(1,rows+1):
+            for c in range(1,cols+1):
+                if self.get_value(r,c) in ["L","I","T","S"]:
+                    #we found the first cell with shape
+                    start = (r,c)
+                    break
+        
+        visitted = set() 
+        queue = [start]    
+        
+        while queue:
+            r,c = queue.pop()
+            if (r,c) in visitted:
+                #cell already seen
+                continue    
+            visitted.add((r,c))
+            for newR, newC in self.adjacents_positions_without_diagonals(r,c):
+                if self.get_value(newR,newC) in ["L","I","T","S"] and (newR,newC) not in visitted:
+                    #new cell to check
+                    queue.append((newR,newC))
+                    
+        return len(visitted) == len(self.regionList) * 4 
+
+
+
+    def getAdjacentCells(self, cell: Cell, same_region_only: bool = False, exclude: list[Cell] = []):
+        adjacent_cells_same_region = []
+        row_var = -1,  0,  1,  0
+        col_var =  0,  1,  0, -1
+        max = self.size - 1
+
+        # Check up, right, down and left, respectively
+        for i in range(4):
+            row = cell.getRow() + row_var[i]
+            col = cell.getCol() + col_var[i]
+            if row < 0 or col < 0 or row > max or col > max: continue
+            new_cell = self.cellList[row][col]
+            if (not same_region_only or cell.getRegionCell() == new_cell.getRegionCell()) and new_cell not in exclude:
+                adjacent_cells_same_region.append(new_cell)
+
+        return adjacent_cells_same_region
+    
+
+    def findCrosses(self, shape: list[Cell], shape_type: str) -> list[Cell]:
+        crosses = []
+        adjacency = set() # To avoid duplications
+
+        # Get empty adjacent cells
+        for cell in shape: 
+            adj_cells = self.getAdjacentCells(cell, exclude=shape)
+            for adj_cell in adj_cells:
+                if adj_cell.flagOccupied: adjacency.add(adj_cell)
+
+        # Occupy the cells temporarily
+        for cell in shape: cell.putShapeCell(shape_type)
+        
+        # Find crosses
+        for cell in adjacency:
+            if self.madeSquares([cell]): crosses.append(cell)
+
+        # Desoccupy the cells
+        for cell in shape: cell.desoccupyCell()
+
+        return crosses
+    
+
+    def addShape(self, shapes: list, shape: list, directions: list, other_crosses: list):
+        shape_type = whichShape(directions)
+        if shape_type not in "LITS": return
+        shape_form = createShapeForm(directions)
+        crosses = self.findCrosses(shape, shape_type)
+        crosses.extend(other_crosses)
+        crosses = list(set(crosses)) # Eliminate duplicated values
+        new_elem = (shape_type, shape_form, shape, crosses)
+        if new_elem not in shapes: shapes.append(new_elem)
+    
+
+    def cellDirection(self, cell1: Cell, cell2: Cell) -> int:
+        '''
+        Returns the direction from cell1 to cell2 if they are adjacent, excluding diagonals.
+
+        Up: 1  
+        Down: -1  
+        Left: 2  
+        Right: -2  
+
+        Returns 0 if the cells are not adjacent.
+        '''
+        row_diff = cell1.getRow() - cell2.getRow()
+        col_diff = cell1.getCol() - cell2.getCol()
+        if abs(row_diff) + abs(col_diff) != 1: return 0 # The cells are not adjacent
+        if row_diff: return row_diff
+        else: return col_diff * 2
+
+
+    def getPossibleShapesStartingOnCell(self, cell: Cell) -> list:
+        '''
+        This function does not return all possible shapes that include the cell!
+        '''
+
+        # Initialize variables
+        stack = []
+        shapes = []
+        crosses = []
+        direction = 0 # up: 1, down: -1, left: 2, right: -2
+        directions = [] # Directions are used to determine the shape
+        current_cell = cell
+        shape = [current_cell]
+        num_cells = 1
+        possible_T_verified = set()
+        stack.append(self.getAdjacentCells(current_cell, same_region_only=True))
+
+        # Search for shapes
+        while stack:
+
+            if num_cells == 4:
+                self.addShape(shapes, shape, directions, crosses)
+                if directions: directions.pop()
+                shape.pop()
+                num_cells -= 1
+                if shape: current_cell = shape[-1]
+
+            elif not stack[-1]:
+                stack.pop()
+                if directions: directions.pop()
+                shape.pop()
+                num_cells -= 1
+                if shape: current_cell = shape[-1]
+
+            elif num_cells == 3 and allEqual(directions) and shape not in possible_T_verified: # Try to add T shapes
+                possible_T_verified.add(shape)
+                possible_cells = self.getAdjacentCells(shape[-2], same_region_only=True, exclude=shape)
+                for possible_cell in possible_cells:
+                    t_directions = directions.copy()
+                    t_directions.append(-t_directions[-1])
+                    t_directions.append(self.cellDirection(shape[-2], possible_cell))
+                    t_shape = shape.copy()
+                    t_shape.append(possible_cell)
+                    self.addShape(shapes, shape, directions, crosses)
+
+            else:
+                if self.madeSquares([stack[-1][-1]]): # If adding the next cell causes a square, just skip that cell
+                    crosses.append(stack[-1][-1])
+                    stack[-1].pop()
+                    continue
+                direction = self.cellDirection(current_cell, stack[-1][-1])
+                assert direction != 0
+                current_cell = stack[-1][-1]
+                stack[-1].pop()
+                shape.append(current_cell)
+                num_cells += 1
+                if num_cells < 4: stack.append(self.getAdjacentCells(current_cell, same_region_only=True, exclude=shape))
+
+        return shapes
+
+        
+        
+    def possibleShapes(self, region: Region) -> list:
+        '''
+        Returns a list of (shape, shapeForm, cellsWithShape, cellsWithX)
+        '''
+        possible_shapes = set()
+        region_cells = region.getCells()
+
+        for cell in region_cells:
+            possible_shapes.add(self.getPossibleShapesStartingOnCell(cell))
+
+        return list(possible_shapes)
+    
+
+
+
+class Nuruomino(Problem):
+    def __init__(self, board: Board):
+        """O construtor especifica o estado inicial."""
+        self.initial = NuruominoState(board)
+        
+    def fillAuto(self,state: NuruominoState):
+        board = state.board
+        for region in board.regionList:
+            if region.numSquares == 4:
+                #we can simply put the supposed piece, since it is a 4 piece region
+                (shape,shapeForm) = region.getShape()
+                crosses = self.findCrosses(shapeForm)
+                if(crosses):
+                    for (r,c) in crosses:
+                        shapeForm[r][c] = "X"
+                board.shapeRegion(region.value,shape,shapeForm,True)
+                #print("fill region",region.value,shape,shapeForm)
+                
     def findCrosses(self,shapeForm):
         crossesIndexes = []
         rowNum = 0
@@ -818,183 +1126,60 @@ class Board:
                 colNum += 1
             rowNum += 1
         return crossesIndexes
-    
-    def isCross(self,shapeForm,rowNum,colNum):
-        if shapeForm[rowNum-1][colNum] == 1:
-            if shapeForm[rowNum][colNum+1] == 1:
-                if shapeForm[rowNum-1][colNum+1] == 1:
-                    return True
-            if shapeForm[rowNum][colNum-1] == 1:
-                if shapeForm[rowNum-1][colNum-1] == 1:
-                    return True
-        if shapeForm[rowNum+1][colNum] == 1:
-            if shapeForm[rowNum][colNum+1] == 1:
-                if shapeForm[rowNum+1][colNum+1] == 1:
-                    return True
-            if shapeForm[rowNum][colNum-1] == 1:
-                if shapeForm[rowNum+1][colNum-1] == 1:
-                    return True
-        return False
-    
-
-
-    def getAdjacentCellsSameRegion(self, cell: Cell, exclude: list[Cell] = []):
-        adjacent_cells_same_region = []
-        row_var = -1, 0, 1, 0
-        col_var = 0, 1, 0, -1
-        max = self.size - 1
-
-        # Check up, right, down and left, respectively
-        for i in range(4):
-            row = cell.getRow() + row_var[i]
-            col = cell.getCol() + col_var[i]
-            if row < 0 or col < 0 or row > max or col > max: continue
-            new_cell = self.cellList[row][col]
-            if cell.getRegionCell() == new_cell.getRegionCell() and new_cell not in exclude:
-                adjacent_cells_same_region.append(new_cell)
-
-        return adjacent_cells_same_region
-    
-
-    def cellDirection(self, cell1: Cell, cell2: Cell) -> int:
-        '''
-        Returns the direction from cell1 to cell2 if they are adjacent, excluding diagonals.
-
-        Up: 1  
-        Down: -1  
-        Left: 2  
-        Right: -2  
-
-        Returns 0 if the cells are not adjacent.
-        '''
-        row_diff = cell1.getRow() - cell2.getRow()
-        col_diff = cell1.getCol() - cell2.getCol()
-        if abs(row_diff) + abs(col_diff) != 1: return 0 # The cells are not adjacent
-        if row_diff: return row_diff
-        else: return col_diff * 2
-
-
-    def getPossibleShapesStartingOnCell(self, cell: Cell) -> list[tuple[str, set[Cell]]]: # example: [("L", {c1, c2, c3, c4}), ("I", {c2, c3, c4, c5}), ...]
-        '''
-        This function does not return all possible shapes that include the cell!
-        '''
-
-        # Initialize variables
-        stack = []
-        shapes = []
-        direction = 0 # up: 1, down: -1, left: 2, right: -2
-        directions = [] # Directions are used to determine the shape
-        current_cell = cell
-        shape = [current_cell]
-        num_cells = 1
-        possible_T_verified = set()
-        stack.append(self.getAdjacentCellsSameRegion(current_cell))
-
-        # Search for shapes
-        while stack:
-
-            if num_cells == 4:
-                shape_type = whichShape(directions)
-                if shape_type in "LITS":
-                    new_elem = (shape_type, set(shape))
-                    if new_elem not in shapes: shapes.append(new_elem)
-                if directions: directions.pop()
-                shape.pop()
-                num_cells -= 1
-                if shape: current_cell = shape[-1]
-
-            elif not stack[-1]:
-                stack.pop()
-                if directions: directions.pop()
-                shape.pop()
-                num_cells -= 1
-                if shape: current_cell = shape[-1]
-
-            elif num_cells == 3 and allEqual(directions) and shape not in possible_T_verified: # Try to add T shapes
-                possible_T_verified.add(shape)
-                possible_cells = self.getAdjacentCellsSameRegion(shape[-2], shape)
-                for possible_cell in possible_cells:
-                    t_shape = shape
-                    t_shape.append(possible_cell)
-                    shapes.append(("T", set(t_shape)))
-
-            else:
-                direction = self.cellDirection(current_cell, stack[-1][-1])
-                assert direction != 0
-                current_cell = stack[-1][-1]
-                stack[-1].pop()
-                shape.append(current_cell)
-                num_cells += 1
-                if num_cells < 4: stack.append(self.getAdjacentCellsSameRegion(current_cell, shape))
-
-        return shapes
-
-        
-        
-    def possibleShapes(self, region: Region):
-        '''
-        Returns a list of (shape, shapeForm, cellsWithShape, cellsWithX)
-        '''
-        possible_shapes = []
-        region_cells = region.getCells()
-
-        for cell in region_cells:
-            possible_shapes.append(self.getPossibleShapesStartingOnCell(cell))
-
-        return possible_shapes
-                
-
-
-
-class Nuruomino(Problem):
-    def __init__(self, board: Board):
-        """O construtor especifica o estado inicial."""
-        self.initial = NuruominoState(board)
 
     def actions(self, state: NuruominoState):
         """Retorna uma lista de ações que podem ser executadas a
         partir do estado passado como argumento."""
         board = state.board
         listActions = []
+        region = board.getRegionBiggestPriority()
+        if isinstance(region,bool):
+            #the regions are all filled
+            return []
+    
         overlappedCellsShape = []
         overlappedCellsX = []
-        cellsShapeDict = {}
-        for region in board.regionList:
-            if region.numSquares == 4:
-                #we can simply put the supposed piece, since it is a 4 piece region
-                action = region.getShape() #action = (shape,shapeForm)
-                listActions.append((region.value,action))
-            else:
-                #print("for region",region.value)
-                #the region has more than 4 squares, so we need to test each shape and shapeForm
-                firstFlag = True
-                for shape in shapeDict:
-                    for shapeForm in shapeDict[shape]:
-                        worked, cellsWithShape, cellsWithX = board.shapeRegion(region.value,shape,[row[:] for row in shapeForm],False)  
-                        if worked:
-                            listActions.append((region.value,(shape,shapeForm)))
-                            if firstFlag:
-                                firstFlag = False
-                                overlappedCellsShape = cellsWithShape
-                                overlappedCellsX = cellsWithX
-                                for cell in overlappedCellsShape:
-                                   cellsShapeDict[cell] = [shape]
-                            else:
-                                #check for overlaps in shaped  cells
-                                overlappedCellsShape = [cell for cell in overlappedCellsShape if cell in cellsWithShape]
-                                for cell in overlappedCellsShape:
-                                    if shape not in cellsShapeDict[cell]:
-                                        cellsShapeDict[cell].append(shape)
-                                        
-                                #check for overlap in X cells
-                                overlappedCellsX = [cell for cell in overlappedCellsX if cell in cellsWithX]
-                                        
-            #print("found shape overlap at:")   
-            #for cell in overlappedCellsShape:
-            #    print(cell.row,cell.col, "with shapes", cellsShapeDict[cell])
-            #print("found X overlap at:")   
-            #for cell in overlappedCellsX:
-            #    print(cell.row,cell.col)
+        cellsShapeOverlap = []
+        if region.numSquares == 4:
+            #we can simply put the supposed piece, since it is a 4 piece region
+            action = region.getShape() #action = (shape,shapeForm)
+            crosses = self.findCrosses(action[1])
+            if(crosses):
+                    for (r,c) in crosses:
+                        action[1][r][c] = "X"
+            listActions.append((region.value,action))
+        else:
+            #print("for region",region.value)
+            #the region has more than 4 squares, so we need to test each shape and shapeForm
+            firstFlag = True
+            for shape in shapeDict:
+                for shapeForm in shapeDict[shape]:
+                    worked, cellsWithShape, cellsWithX = board.shapeRegion(region.value,shape,[row[:] for row in shapeForm],False)  
+                    if worked:
+                        listActions.append((region.value,(shape,shapeForm)))
+                        if firstFlag:
+                            firstFlag = False
+                            overlappedCellsShape = cellsWithShape
+                            overlappedCellsX = cellsWithX
+                            for cell in overlappedCellsShape:
+                               if shape not in cellsShapeOverlap:
+                                    cellsShapeOverlap.append(shape)
+                        else:
+                            #check for overlaps in shaped  cells
+                            overlappedCellsShape = [cell for cell in overlappedCellsShape if cell in cellsWithShape]
+                            for cell in overlappedCellsShape:
+                                if shape not in cellsShapeOverlap:
+                                    cellsShapeOverlap.append(shape)
+                                    
+                            #check for overlap in X cells
+                            overlappedCellsX = [cell for cell in overlappedCellsX if cell in cellsWithX]
+                                    
+        #print("found shape overlap at:")   
+        #for cell in overlappedCellsShape:
+        #    print(cell.row,cell.col, "with shapes", cellsShapeOverlap)
+        #print("found X overlap at:")   
+        #for cell in overlappedCellsX:
+        #    print(cell.row,cell.col)
         return listActions       
 
     def result(self, state: NuruominoState, action):
@@ -1019,10 +1204,11 @@ class Nuruomino(Problem):
         if (regionValue,(shape,shapeForm)) in listActions:
             #the action is in listActions, so we do it
             newState.board.shapeRegion(regionValue,shape,shapeForm,True)
+            #print(newState.board.print())
             return newState
         else:
             #the action is not in listActions, so it is not a possible action
-            return newState
+            return state
         
 
     def goal_test(self, state: NuruominoState):
@@ -1035,8 +1221,7 @@ class Nuruomino(Problem):
                 return False
             
         #checks if every shape is touching
-        
-        return True 
+        return state.board.verifyConnectivity()
 
     def h(self, node: Node):
         """Função heuristica utilizada para a procura A*."""
@@ -1051,3 +1236,16 @@ class Nuruomino(Problem):
         #    pass
         # TODO
         pass
+    
+    
+if __name__ == "__main__":
+    board = Board.parse_instance()
+    problem = Nuruomino(board)
+    problem.fillAuto(problem.initial)
+    solution_node = depth_limited_search(problem)
+    if isinstance(solution_node,str):
+        print("No solution found")
+    else:
+        #found solution
+        solution_state = solution_node.state
+        print(solution_state.board.print())
