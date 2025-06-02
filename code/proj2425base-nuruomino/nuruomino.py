@@ -9,6 +9,7 @@
 from sys import stdin
 from search import *  # Import the classes from search.py
 import numpy as np
+#import time
 
  
 shapeDict=  {  
@@ -901,6 +902,9 @@ class Nuruomino(Problem):
     def actions(self, state: NuruominoState):
         """Retorna uma lista de ações que podem ser executadas a
         partir do estado passado como argumento."""
+        if state is None:
+            return []
+        
         board = state.board
         listActions = []
         region = board.getRegionBiggestPriority()
@@ -944,7 +948,7 @@ class Nuruomino(Problem):
                                     
                             #check for overlap in X cells
                             overlappedCellsX = [cell for cell in overlappedCellsX if cell in cellsWithX]
-                                    
+                        
         #print("found shape overlap at:")   
         #for cell in overlappedCellsShape:
         #    print(cell.row,cell.col, "with shapes", cellsShapeOverlap)
@@ -960,6 +964,8 @@ class Nuruomino(Problem):
         das presentes na lista obtida pela execução de
         self.actions(state)."""
         listActions = self.actions(state) #listActions = [(index, regionValue,(shape,shapeForm))]
+        if listActions == []:
+            return None
         
         if len(action) == 2:
             #action -> (regionValue, (index, shape, form of shape))
@@ -971,8 +977,10 @@ class Nuruomino(Problem):
             
         if (regionValue,(info)) in listActions:
             #the action is in listActions, so we do it
+            
             newState = NuruominoState(state.board.copy()) #copies the board, but with new reference
             newState.board.putShapeRegion(info,regionValue)
+            #print(newState.board.print())
             return newState
         else:
             #the action is not in listActions, so it is not a possible action
@@ -983,6 +991,10 @@ class Nuruomino(Problem):
         """Retorna True se e só se o estado passado como argumento é
         um estado objetivo. Deve verificar se todas as posições do tabuleiro
         estão preenchidas de acordo com as regras do problema."""
+        
+        if state is None:
+            return None
+        
         #checks if every region is occupied 
         for region in state.board.regionList:
             if not region.isOccupied():
@@ -1007,13 +1019,16 @@ class Nuruomino(Problem):
     
     
 if __name__ == "__main__":
+    #inicio = time.time()
     board = Board.parse_instance()
     problem = Nuruomino(board)
     problem.fillAuto(problem.initial)
-    solution_node = depth_limited_search(problem)
+    solution_node = depth_first_graph_search(problem)
     if isinstance(solution_node,str) or solution_node == None:
         print("No solution found")
     else:
         #found solution
         solution_state = solution_node.state
         print(solution_state.board.print())
+    #fim = time.time()
+    #print(fim-inicio)
