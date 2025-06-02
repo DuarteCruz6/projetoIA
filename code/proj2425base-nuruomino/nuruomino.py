@@ -634,9 +634,6 @@ class Board:
                 cellsFromOtherRegion,cellsOccupied,worked,cellsFilledWithShape,cellsFilledWithX = region.putShape(startIndex,shape,shapeForm)
                 if not worked: 
                     self.desocuppyCells(cellsOccupied)
-                else:
-                    if regionValue == 7 and shape == "I":
-                        print("worked at index",startIndex)
             if not stop:
                 desocupyFlag = False
                 
@@ -868,7 +865,6 @@ class Nuruomino(Problem):
                     for (r,c) in crosses:
                         shapeForm[r][c] = "X"
                 board.putShapeRegion((0,shape,shapeForm),region.value)
-                print("fill region",region.value,shape,shapeForm)
                 
     def findCrosses(self,shapeForm):
         crossesIndexes = []
@@ -916,7 +912,6 @@ class Nuruomino(Problem):
         overlappedCellsX = []
         cellsShapeOverlap = []
         if region.numSquares == 4:
-            print("region with 4 squares",region.value)
             #we can simply put the supposed piece, since it is a 4 piece region
             shape,shapeForm = region.getShape() #action = (shape,shapeForm)
             crosses = self.findCrosses(shapeForm)
@@ -925,16 +920,13 @@ class Nuruomino(Problem):
                         shapeForm[r][c] = "X"
             listActions.append((region.value,(0,shape,shapeForm)))
         else:
-            print("for region",region.value)
             #the region has more than 4 squares, so we need to test each shape and shapeForm
             firstFlag = True
             for shape in shapeDict:
                 for shapeForm in shapeDict[shape]:
                     worked, cellsWithShape, cellsWithX, possibleSpots = board.getShapeRegion(region.value,shape,[row[:] for row in shapeForm])  
                     if worked:
-                        print("possible spots",possibleSpots)
                         for elem in possibleSpots:
-                            print("action added:",region.value, elem[2])
                             listActions.append((region.value, elem[2]))
                         if firstFlag:
                             firstFlag = False
@@ -959,7 +951,7 @@ class Nuruomino(Problem):
         #print("found X overlap at:")   
         #for cell in overlappedCellsX:
         #    print(cell.row,cell.col)
-        print("listActions",listActions)
+        #print("listActions",listActions)
         return listActions       
 
     def result(self, state: NuruominoState, action):
@@ -970,26 +962,17 @@ class Nuruomino(Problem):
         listActions = self.actions(state) #listActions = [(index, regionValue,(shape,shapeForm))]
         
         if len(action) == 2:
-            print(action)
             #action -> (regionValue, (index, shape, form of shape))
             regionValue = action[0]
             info = action[1]
             index = info[0]
             shape = info[1]
             shapeForm = info[2]
-        else:
-            print("action with len !=2",action)
             
         if (regionValue,(info)) in listActions:
-            if(regionValue == 7 and shape =="I"):
-                print("actions",listActions)
             #the action is in listActions, so we do it
             newState = NuruominoState(state.board.copy()) #copies the board, but with new reference
             newState.board.putShapeRegion(info,regionValue)
-            
-            print("for region",regionValue,shape,shapeForm)
-            print(newState.board.priorityQueueScores)
-            print(newState.board.print())
             return newState
         else:
             #the action is not in listActions, so it is not a possible action
