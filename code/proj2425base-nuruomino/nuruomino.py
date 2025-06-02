@@ -279,6 +279,15 @@ class Cell:
             #the cell has to be an X
             self.occupyCell()
             return 1
+        
+    # Definition of == operator between cells
+    def __eq__(self, other: 'Cell'):
+        return self.getRow() == other.getRow() and self.getCol() == other.getCol()
+    
+    # Make Cell hashable
+    def __hash__(self):
+        return hash((self.getRow(), self.getCol()))
+
 
 #struct Region
 class Region:
@@ -932,22 +941,23 @@ class Board:
 
 
 
-    def getAdjacentCells(self, cell: Cell, same_region_only: bool = False, exclude: list[Cell] = []):
-        adjacent_cells_same_region = []
+    def getAdjacentCells(self, cell: Cell, same_region_only: bool = False, exclude: list[Cell] = None):
+        if exclude is None: exclude = []
+        adjacent_cells = []
         row_var = -1,  0,  1,  0
         col_var =  0,  1,  0, -1
         max = self.size - 1
 
         # Check up, right, down and left, respectively
-        for i in range(4):
+        for i in range(len(row_var)):
             row = cell.getRow() + row_var[i]
             col = cell.getCol() + col_var[i]
             if row < 0 or col < 0 or row > max or col > max: continue
             new_cell = self.cellList[row][col]
             if (not same_region_only or cell.getRegionCell() == new_cell.getRegionCell()) and new_cell not in exclude:
-                adjacent_cells_same_region.append(new_cell)
+                adjacent_cells.append(new_cell)
 
-        return adjacent_cells_same_region
+        return adjacent_cells
     
 
     def findCrosses(self, shape: list[Cell], shape_type: str) -> list[Cell]:
@@ -1022,22 +1032,16 @@ class Board:
         # Search for shapes
         while stack:
 
-            if num_cells == 4:
-                self.addShape(shapes, shape, directions, crosses)
+            if num_cells == 4 or not stack[-1]:
+                if num_cells == 4: self.addShape(shapes, shape, directions, crosses)
+                else: stack.pop()
                 if directions: directions.pop()
                 shape.pop()
                 num_cells -= 1
                 if shape: current_cell = shape[-1]
 
-            elif not stack[-1]:
-                stack.pop()
-                if directions: directions.pop()
-                shape.pop()
-                num_cells -= 1
-                if shape: current_cell = shape[-1]
-
-            elif num_cells == 3 and allEqual(directions) and shape not in possible_T_verified: # Try to add T shapes
-                possible_T_verified.add(shape)
+            elif num_cells == 3 and allEqual(directions) and tuple(shape) not in possible_T_verified: # Try to add T shapes
+                possible_T_verified.add(tuple(shape))
                 possible_cells = self.getAdjacentCells(shape[-2], same_region_only=True, exclude=shape)
                 for possible_cell in possible_cells:
                     t_directions = directions.copy()
