@@ -298,6 +298,7 @@ class Cell:
     
     # Definition of == operator between cells
     def __eq__(self, other: 'Cell'):
+        if other is None: return False
         return self.getRow() == other.getRow() and self.getCol() == other.getCol()
     
     # Make Cell hashable
