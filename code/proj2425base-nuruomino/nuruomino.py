@@ -282,6 +282,8 @@ class Region:
     
     #calculates the score for the priority queue
     def calculateScore(self) -> int:
+        if self.flagOccupied:
+            return 0
         return self.numSquares - self.numRestrictions*0.25
 
     def isOccupied(self) -> bool:
@@ -630,6 +632,9 @@ class Board:
                 cellsFromOtherRegion,cellsOccupied,worked,cellsFilledWithShape,cellsFilledWithX = region.putShape(startIndex,shape,shapeForm)
                 if not worked: 
                     self.desocuppyCells(cellsOccupied)
+                else:
+                    if regionValue == 7 and shape == "I" and isToInsert:
+                        print("worked at index",startIndex)
                 
             if not stop:
                 desocupyFlag = False
@@ -658,8 +663,8 @@ class Board:
 
                 if not desocupyFlag: 
                     #we save the spot in a list and clear the cells -> we need to choose the best spot (the one with the best score)
-                    score = len(cellsFromOtherRegion) #the less the better
-                    possibleSpots.append(((startIndex,shape,shapeForm),score))
+                    score = len(cellsFromOtherRegion) #the less restrictions on other regions the better
+                    possibleSpots.append(((startIndex,shape,shapeForm),score,self.getTouching(cellsFilledWithShape,shape)))
                     self.desocuppyCells(cellsOccupied)
                     for cell in cellsFilledWithShape:
                         cellsWithShape.append(cell)
@@ -668,12 +673,34 @@ class Board:
 
         if isToInsert and len(possibleSpots) > 0:      
             bestInfo = self.getBestScoreShape(possibleSpots)
+            if regionValue == 7 and shape == "I":
+                print("((startIndex,shape,shapeForm),score,touching")
+                print("possiblespots",possibleSpots)
+                print("best spot",bestInfo)
             self.putShapeRegion(bestInfo,region)
             self.updatePriorityQueue()
         else:
             if len(possibleSpots) > 0:
                 return True, cellsWithShape, cellsWithX
             return False, [], []
+        
+    def getTouching(self,cellsOccupied,shape):
+        #returns the number of shapes from other regions that this shape is touching
+        res = 0
+        cellsAdjacent = set()
+        values = []
+        for cell in cellsOccupied:
+            listAdjacentCells = self.adjacents_positions_without_diagonals(cell.row,cell.col)
+            for row,col in listAdjacentCells:
+                cellsAdjacent.add((row,col))
+            
+        for row,col in cellsAdjacent:
+            value = self.get_value(row,col)
+            if value != shape and value not in values and value in ["L","I","T","S"]:
+                #dont count with this region's cell
+                values.append(value)
+                res+=1
+        return res
         
     def madeSquares(self,cellsOccupied):
         max = self.size
@@ -748,11 +775,18 @@ class Board:
     def getBestScoreShape(self,possibleSpots):
         #possibleSpots = startIndex,shape,shapeForm,score
         minScore = possibleSpots[0][1]
+        bestTouching = possibleSpots[0][2]
         best = possibleSpots[0][0]
-        for (info,score) in possibleSpots:
+        for (info,score,touching) in possibleSpots:
             if score < minScore:
                 minScore = score
                 best = (info)
+            elif score == minScore:
+                #we chose the one who touches the most shapes from other regions
+                if touching>bestTouching:
+                    best = (info)
+                    bestTouching = touching
+                
         return best
     
     def desocuppyCells(self,cellsOccupied):
@@ -928,15 +962,20 @@ class Nuruomino(Problem):
             shape = action[1]
             shapeForm = action[2]
             
-        newState = NuruominoState(state.board.copy()) #copies the board, but with new reference
         if (regionValue,(shape,shapeForm)) in listActions:
+            if(regionValue == 7 and shape =="I"):
+                print("actions",listActions)
             #the action is in listActions, so we do it
+            newState = NuruominoState(state.board.copy()) #copies the board, but with new reference
             newState.board.shapeRegion(regionValue,shape,shapeForm,True)
+            
+            print("for region",regionValue,shape,shapeForm)
+            print(newState.board.priorityQueueScores)
             print(newState.board.print())
             return newState
         else:
             #the action is not in listActions, so it is not a possible action
-            return state
+            return None
         
 
     def goal_test(self, state: NuruominoState):
