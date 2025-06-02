@@ -1009,9 +1009,6 @@ class Board:
                     self.addShape(shapes, t_shape, t_directions, already_found_shapes)
 
             else:
-                if self.madeSquares([stack[-1][-1]]): # If adding the next cell causes a square, just skip that cell
-                    stack[-1].pop()
-                    continue
                 direction = self.cellDirection(current_cell, stack[-1][-1])
                 assert direction != 0
                 directions.append(direction)
