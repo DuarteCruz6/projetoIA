@@ -147,27 +147,6 @@ def whichShape(directions: list[int]) -> str:
         and abs(directions[-1]) != abs(directions[0])): return "T"
     else: return ""
 
-
-def shapesTypesSetToStr(shapes: set) -> str:
-    shapes_str = ""
-    for shape_type in LITS:
-        if shape_type in shapes: shapes_str += shape_type
-    return shapes_str
-
-
-def addPaddingRows(shape_form: list[list], left_padding: bool):
-    # Get max length
-    length = 0
-    for row in shape_form:
-        l = len(row)
-        if l > length: length = l
-
-    # Add padding
-    for row in shape_form:
-        if len(row) == length: continue
-        if left_padding: row.insert(0, 0)
-        else: row.append(0)
-
 ##################################################################
 
 
@@ -939,63 +918,6 @@ class Board:
             region.updateRestriction()
             
         self.updatePriorityQueue()
-
-
-    
-    def getShapeFormAndCrosses(self, directions: list[int]) -> list[list]:
-        shape_form = [[1]]
-        row = 0
-        col = 0
-
-        for direction in directions:
-
-            # Up
-            if direction == 1:
-                if row == 0: shape_form.insert(0, [0] * len(shape_form[row])) # Create a new row at the top
-                else: row -= 1
-                shape_form[row][col] = 1
-
-            # Down
-            elif direction == -1:
-                if row == len(shape_form) - 1: shape_form.append([0] * len(shape_form[row]))
-                row += 1
-                shape_form[row][col] = 1
-
-            # Left
-            elif direction == 2:
-                if col == 0: shape_form[row].insert(0, 1)
-                else: col -= 1
-                addPaddingRows(shape_form, True)
-
-            # Right
-            elif direction == -2:
-                if col == len(shape_form[row]) - 1: shape_form[row].append(1)
-                col += 1
-                addPaddingRows(shape_form, False)
-
-        # Add (and add) the crosses
-        crosses = []
-        row_var = -1, -1,  0,  1,  1,  1,  0, -1
-        col_var =  0,  1,  1,  1,  0, -1, -1,  0
-        row_max = len(shape_form) - 1
-        for row in range(len(shape_form)):
-            col_max = len(shape_form[row]) - 1
-            for col in range(len(shape_form[row])):
-                if shape_form[row][col] == 1: continue
-                streak = 0
-                for i in range(len(row_var)):
-                    row_adj = row + row_var[i]
-                    col_adj = col + col_var[i]
-                    if row_adj < 0 or col_adj < 0 or row_adj > row_max or col_adj > col_max: continue
-                    if streak == 0 and abs(row_var[i]) + abs(col_var[i]) == 2: continue # To avoiding starting to count occupied cells in the corner
-                    if shape_form[row_adj][col_adj] == 1: streak += 1
-
-                    if streak == 3:
-                        shape_form[row][col] = "X"
-                        crosses.append(self.cellList[row][col])
-                        break
-
-        return shape_form, crosses
     
 
 
@@ -1018,16 +940,14 @@ class Board:
         return adjacent_cells
     
 
-    def addShape(self, shapes: list, shape_original: list, directions: list, already_found_shapes: set[frozenset[Cell]]):
+    def addShape(self, shapes: list, shape: list, directions: list, already_found_shapes: set[frozenset[Cell]]):
         
-        frozen_shape = frozenset(shape_original)
+        frozen_shape = frozenset(shape)
         if frozen_shape in already_found_shapes: return
-        shape = shape_original.copy()
         shape_type = whichShape(directions)
         if not shape_type: return
-        shape_form, crosses = self.getShapeFormAndCrosses(directions)
         already_found_shapes.add(frozen_shape)
-        new_elem = (shape_type, shape_form, shape, crosses)
+        new_elem = (shape_type, frozen_shape)
         shapes.append(new_elem)
     
 
@@ -1107,7 +1027,7 @@ class Board:
         
     def possibleShapes(self, region: Region) -> list:
         '''
-        Returns a list of (shape, shapeForm, cellsWithShape, cellsWithX)
+        Returns a list of (shape, cellsWithShape)
         '''
         possible_shapes = []
         already_found_shapes = set()
