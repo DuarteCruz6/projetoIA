@@ -157,8 +157,13 @@ class Region:
             finalActions = []
             cells = []
             for shape,cellsOccupied, regionTouching in self.possibilities:
-                if shape == shapeFinal and coords == cellsOccupied:
-                    finalActions.append((shape,cellsOccupied,regionTouching))
+                if shape == shapeFinal:
+                    corresponds = True
+                    for coordinate in coords:
+                        if coordinate not in cellsOccupied:
+                           corresponds = False 
+                    if corresponds:
+                        finalActions.append((shape,cellsOccupied,regionTouching))
 
             if len(finalActions) == 1:
                 #only one action remains
@@ -754,6 +759,8 @@ class Board:
         
         for region in self.regionList:
             if not region.isFilled:
+                print("region",region.value)
+                print("possibilities",region.possibilities)
                 if first:
                     minPossibilities = len(region.possibilities)
                     regionToSolve = region
@@ -842,6 +849,7 @@ if __name__ == "__main__":
     board = Board.parse_instance()
     problem = Nuruomino(board)
     board.preProcess()
+    print(board.print())
     board.solve()
     
     solution_node = depth_first_graph_search(problem)
