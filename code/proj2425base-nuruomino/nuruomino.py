@@ -1,5 +1,5 @@
 # nuruomino.py: Template para implementação do projeto de Inteligência Artificial 2024/2025.
-# Devem alterar as classes e funções neste ficheiro de acordo com as instruções do enunciado.
+# Devem alterar as classes e funções neste ficheiro de acordo com as instruções do enunciado.\
 # Além das funções e classes sugeridas, podem acrescentar outras que considerem pertinentes.
 
 # Grupo 32:
@@ -941,7 +941,8 @@ class Board:
 
 
 
-    def getAdjacentCells(self, cell: Cell, same_region_only: bool = False, exclude: list[Cell] = None):
+    def getAdjacentCells(self, cell: Cell, same_region_only: bool = False, 
+                         unoccupied_only: bool = False, exclude: list[Cell] = None):
         if exclude is None: exclude = []
         adjacent_cells = []
         row_var = -1,  0,  1,  0
@@ -953,8 +954,10 @@ class Board:
             row = cell.getRow() + row_var[i]
             col = cell.getCol() + col_var[i]
             if row < 0 or col < 0 or row > max or col > max: continue
-            new_cell = self.cellList[row][col]
-            if (not same_region_only or cell.getRegionCell() == new_cell.getRegionCell()) and new_cell not in exclude:
+            new_cell: Cell = self.cellList[row][col]
+            if (not same_region_only or cell.getRegionCell() == new_cell.getRegionCell()) \
+                and (not unoccupied_only or not new_cell.flagOccupied) \
+                and new_cell not in exclude:
                 adjacent_cells.append(new_cell)
 
         return adjacent_cells
@@ -966,7 +969,7 @@ class Board:
 
         # Get empty adjacent cells
         for cell in shape: 
-            adj_cells = self.getAdjacentCells(cell, exclude=shape)
+            adj_cells = self.getAdjacentCells(cell, unoccupied_only=True, exclude=shape)
             for adj_cell in adj_cells:
                 if adj_cell.flagOccupied: adjacency.add(adj_cell)
 
@@ -1027,7 +1030,7 @@ class Board:
         shape = [current_cell]
         num_cells = 1
         possible_T_verified = set()
-        stack.append(self.getAdjacentCells(current_cell, same_region_only=True))
+        stack.append(self.getAdjacentCells(current_cell, same_region_only=True, unoccupied_only=True))
 
         # Search for shapes
         while stack:
@@ -1036,13 +1039,14 @@ class Board:
                 if num_cells == 4: self.addShape(shapes, shape, directions, crosses)
                 else: stack.pop()
                 if directions: directions.pop()
+                assert current_cell == shape[-1]
                 shape.pop()
                 num_cells -= 1
                 if shape: current_cell = shape[-1]
 
             elif num_cells == 3 and allEqual(directions) and tuple(shape) not in possible_T_verified: # Try to add T shapes
                 possible_T_verified.add(tuple(shape))
-                possible_cells = self.getAdjacentCells(shape[-2], same_region_only=True, exclude=shape)
+                possible_cells = self.getAdjacentCells(shape[-2], same_region_only=True, unoccupied_only=True, exclude=shape)
                 for possible_cell in possible_cells:
                     t_directions = directions.copy()
                     t_directions.append(-t_directions[-1])
@@ -1062,7 +1066,7 @@ class Board:
                 stack[-1].pop()
                 shape.append(current_cell)
                 num_cells += 1
-                if num_cells < 4: stack.append(self.getAdjacentCells(current_cell, same_region_only=True, exclude=shape))
+                if num_cells < 4: stack.append(self.getAdjacentCells(current_cell, same_region_only=True, unoccupied_only=True, exclude=shape))
 
         return shapes
 
