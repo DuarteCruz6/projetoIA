@@ -999,8 +999,7 @@ class Board:
     
 
 
-    def getAdjacentCells(self, cell: Cell, same_region_only: bool = False, 
-                         unoccupied_only: bool = False, exclude: list[Cell] = None):
+    def getAdjacentCells(self, cell: Cell, same_region_only: bool = False, exclude: list[Cell] = None):
         if exclude is None: exclude = []
         adjacent_cells = []
         row_var = -1,  0,  1,  0
@@ -1013,9 +1012,7 @@ class Board:
             col = cell.getCol0() + col_var[i]
             if row < 0 or col < 0 or row > max or col > max: continue
             new_cell: Cell = self.cellList[row][col]
-            if (not same_region_only or cell.getRegionCell() == new_cell.getRegionCell()) \
-                and (not unoccupied_only or not new_cell.flagOccupied) \
-                and new_cell not in exclude:
+            if (not same_region_only or cell.getRegionCell() == new_cell.getRegionCell()) and new_cell not in exclude:
                 adjacent_cells.append(new_cell)
 
         return adjacent_cells
@@ -1066,7 +1063,7 @@ class Board:
         shape = [current_cell]
         num_cells = 1
         possible_T_verified = set()
-        stack.append(self.getAdjacentCells(current_cell, same_region_only=True, unoccupied_only=True))
+        stack.append(self.getAdjacentCells(current_cell, same_region_only=True))
 
         # Search for shapes
         while stack:
@@ -1082,7 +1079,7 @@ class Board:
 
             elif num_cells == 3 and allEqual(directions) and tuple(shape) not in possible_T_verified: # Try to add T shapes
                 possible_T_verified.add(tuple(shape))
-                possible_cells = self.getAdjacentCells(shape[-2], same_region_only=True, unoccupied_only=True, exclude=shape)
+                possible_cells = self.getAdjacentCells(shape[-2], same_region_only=True, exclude=shape)
                 for possible_cell in possible_cells:
                     t_directions = directions.copy()
                     t_directions.append(-t_directions[-1])
@@ -1102,7 +1099,7 @@ class Board:
                 stack[-1].pop()
                 shape.append(current_cell)
                 num_cells += 1
-                if num_cells < 4: stack.append(self.getAdjacentCells(current_cell, same_region_only=True, unoccupied_only=True, exclude=shape))
+                if num_cells < 4: stack.append(self.getAdjacentCells(current_cell, same_region_only=True, exclude=shape))
 
         return shapes
 
@@ -1187,7 +1184,7 @@ class Nuruomino(Problem):
         overlappedCellsShape = []
         overlappedCellsX = []
         cellsShapeOverlap = []
-        if region.numSquares == 4:
+        if region.numSquares == -1:
             #we can simply put the supposed piece, since it is a 4 piece region
             action = region.getShape() #action = (shape,shapeForm)
             crosses = self.findCrosses(action[1])
@@ -1198,12 +1195,13 @@ class Nuruomino(Problem):
         else:
             #print("for region",region.value)
             #the region has more than 4 squares, so we need to test each shape and shapeForm
-            print(region.getValue(), "\n\n")
-            a = board.possibleShapes(region)
-            for b in a:
-                print(b)
-                print("\n\n")
-            print("\n\n")
+            for region in board.regionList:
+                print("\n\n", region.getValue(), "\n")
+                a = board.possibleShapes(region)
+                for b in a:
+                    print(b)
+                    print("\n")
+                print("\n")
             
             #firstFlag = True
             #for shape in shapeDict:
