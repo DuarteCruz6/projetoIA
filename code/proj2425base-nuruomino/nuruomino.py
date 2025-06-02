@@ -150,8 +150,7 @@ def whichShape(directions: list[int]) -> str:
 
 def shapesTypesSetToStr(shapes: set) -> str:
     shapes_str = ""
-    shape_types = "LITS"
-    for shape_type in shape_types:
+    for shape_type in LITS:
         if shape_type in shapes: shapes_str += shape_type
     return shapes_str
 
@@ -248,9 +247,15 @@ class Cell:
     
     def getRow(self) -> int:
         return self.row
+    
+    def getRow0(self) -> int:
+        return self.row - 1
 
     def getCol(self) -> int:
         return self.col
+    
+    def getCol0(self) -> int:
+        return self.col - 1
     
     def getRegionCell(self) -> int:
         return self.regionValue
@@ -308,6 +313,9 @@ class Cell:
     # Make Cell hashable
     def __hash__(self):
         return hash((self.getRow(), self.getCol()))
+    
+    def __repr__(self):
+        return f"Cell({self.row}, {self.col})"
                 
 
 #struct Region
@@ -986,6 +994,8 @@ class Board:
             
         self.updatePriorityQueue()
     
+
+
     def getAdjacentCells(self, cell: Cell, same_region_only: bool = False, 
                          unoccupied_only: bool = False, exclude: list[Cell] = None):
         if exclude is None: exclude = []
@@ -996,8 +1006,8 @@ class Board:
 
         # Check up, right, down and left, respectively
         for i in range(len(row_var)):
-            row = cell.getRow() + row_var[i]
-            col = cell.getCol() + col_var[i]
+            row = cell.getRow0() + row_var[i]
+            col = cell.getCol0() + col_var[i]
             if row < 0 or col < 0 or row > max or col > max: continue
             new_cell: Cell = self.cellList[row][col]
             if (not same_region_only or cell.getRegionCell() == new_cell.getRegionCell()) \
@@ -1031,7 +1041,13 @@ class Board:
         return crosses
     
 
-    def addShape(self, shapes: list, shape: list, directions: list, other_crosses: list):
+    def addShape(self, shapes: list, shape_original: list, directions: list, other_crosses:
+                 list, already_found_shapes: set[frozenset[Cell]]):
+        
+        frozen_shape = frozenset(shape_original)
+        if frozen_shape in already_found_shapes: return
+        already_found_shapes.add(frozen_shape)
+        shape = shape_original.copy()
         shape_type = whichShape(directions)
         if shape_type not in "LITS": return
         shape_form = createShapeForm(directions)
@@ -1053,14 +1069,14 @@ class Board:
 
         Returns 0 if the cells are not adjacent.
         '''
-        row_diff = cell1.getRow() - cell2.getRow()
-        col_diff = cell1.getCol() - cell2.getCol()
+        row_diff = cell1.getRow0() - cell2.getRow0()
+        col_diff = cell1.getCol0() - cell2.getCol0()
         if abs(row_diff) + abs(col_diff) != 1: return 0 # The cells are not adjacent
         if row_diff: return row_diff
         else: return col_diff * 2
 
 
-    def getPossibleShapesStartingOnCell(self, cell: Cell) -> list:
+    def getPossibleShapesStartingOnCell(self, cell: Cell, already_found_shapes: set[frozenset[Cell]]) -> list:
         '''
         This function does not return all possible shapes that include the cell!
         '''
@@ -1081,7 +1097,7 @@ class Board:
         while stack:
 
             if num_cells == 4 or not stack[-1]:
-                if num_cells == 4: self.addShape(shapes, shape, directions, crosses)
+                if num_cells == 4: self.addShape(shapes, shape, directions, crosses, already_found_shapes)
                 else: stack.pop()
                 if directions: directions.pop()
                 assert current_cell == shape[-1]
@@ -1098,7 +1114,7 @@ class Board:
                     t_directions.append(self.cellDirection(shape[-2], possible_cell))
                     t_shape = shape.copy()
                     t_shape.append(possible_cell)
-                    self.addShape(shapes, shape, directions, crosses)
+                    self.addShape(shapes, shape, directions, crosses, already_found_shapes)
 
             else:
                 if self.madeSquares([stack[-1][-1]]): # If adding the next cell causes a square, just skip that cell
@@ -1107,6 +1123,7 @@ class Board:
                     continue
                 direction = self.cellDirection(current_cell, stack[-1][-1])
                 assert direction != 0
+                directions.append(direction)
                 current_cell = stack[-1][-1]
                 stack[-1].pop()
                 shape.append(current_cell)
@@ -1121,11 +1138,12 @@ class Board:
         '''
         Returns a list of (shape, shapeForm, cellsWithShape, cellsWithX)
         '''
-        possible_shapes = list()
+        possible_shapes = []
+        already_found_shapes = set()
         region_cells = region.getCells()
 
         for cell in region_cells:
-            possible_shapes.append(self.getPossibleShapesStartingOnCell(cell))
+            possible_shapes.extend(self.getPossibleShapesStartingOnCell(cell, already_found_shapes))
 
         return possible_shapes
     
@@ -1206,7 +1224,12 @@ class Nuruomino(Problem):
         else:
             #print("for region",region.value)
             #the region has more than 4 squares, so we need to test each shape and shapeForm
-            print(board.possibleShapes(region))
+            print(region.getValue(), "\n\n")
+            a = board.possibleShapes(region)
+            for b in a:
+                print(b)
+                print("\n\n")
+            print("\n\n")
             
             #firstFlag = True
             #for shape in shapeDict:
