@@ -143,7 +143,7 @@ def whichShape(directions: list[int]) -> str:
     if length == 3 and allEqual(directions): return "I"
     elif length == 3 and directions[0] == directions[-1]: return "S"
     elif length == 3 and (directions[0] == directions[1] or directions[-1] == directions[-2]): return "L"
-    elif length == 5 and (directions[0] == directions[1] and directions[2] == -directions[0]
+    elif length == 4 and (directions[0] == directions[1] and directions[2] == -directions[0]
         and abs(directions[-1]) != abs(directions[0])): return "T"
     else: return ""
 
@@ -167,60 +167,6 @@ def addPaddingRows(shape_form: list[list], left_padding: bool):
         if len(row) == length: continue
         if left_padding: row.insert(0, 0)
         else: row.append(0)
-
-
-def createShapeForm(directions: list[int]) -> list[list]:
-    shape_form = [[1]]
-    row = 0
-    col = 0
-    
-    for direction in directions:
-
-        # Up
-        if direction == 1:
-            if row == 0: shape_form.insert(0, [0] * len(shape_form[row])) # Create a new row at the top
-            else: row -= 1
-            shape_form[row][col] = 1
-
-        # Down
-        elif direction == -1:
-            if row == len(shape_form) - 1: shape_form.append([0] * len(shape_form[row]))
-            row += 1
-            shape_form[row][col] = 1
-
-        # Left
-        elif direction == 2:
-            if col == 0: shape_form[row].insert(0, 1)
-            else: col -= 1
-            addPaddingRows(shape_form, True)
-
-        # Right
-        elif direction == -2:
-            if col == len(shape_form[row]) - 1: shape_form[row].append(1)
-            col += 1
-            addPaddingRows(shape_form, False)
-
-    # Add the crosses
-    row_var = -1, -1,  0,  1,  1,  1,  0, -1
-    col_var =  0,  1,  1,  1,  0, -1, -1,  0
-    row_max = len(shape_form) - 1
-    for row in range(len(shape_form)):
-        col_max = len(shape_form[row]) - 1
-        for col in range(len(shape_form[row])):
-            if shape_form[row][col] == 1: continue
-            streak = 0
-            for i in range(len(row_var)):
-                row_adj = row + row_var[i]
-                col_adj = col + col_var[i]
-                if row_adj < 0 or col_adj < 0 or row_adj > row_max or col_adj > col_max: continue
-                if streak == 0 and abs(row_var[i]) + abs(col_var[i]) == 2: continue # To avoiding starting to count occupied cells in the corner
-                if shape_form[row_adj][col_adj] == 1: streak += 1
-
-                if streak == 3:
-                    shape_form[row][col] = "X"
-                    break
-
-    return shape_form
 
 ##################################################################
 
@@ -315,7 +261,7 @@ class Cell:
         return hash((self.getRow(), self.getCol()))
     
     def __repr__(self):
-        return f"Cell({self.row}, {self.col})"
+        return f"({self.row}, {self.col})"
                 
 
 #struct Region
@@ -993,6 +939,63 @@ class Board:
             region.updateRestriction()
             
         self.updatePriorityQueue()
+
+
+    
+    def getShapeFormAndCrosses(self, directions: list[int]) -> list[list]:
+        shape_form = [[1]]
+        row = 0
+        col = 0
+
+        for direction in directions:
+
+            # Up
+            if direction == 1:
+                if row == 0: shape_form.insert(0, [0] * len(shape_form[row])) # Create a new row at the top
+                else: row -= 1
+                shape_form[row][col] = 1
+
+            # Down
+            elif direction == -1:
+                if row == len(shape_form) - 1: shape_form.append([0] * len(shape_form[row]))
+                row += 1
+                shape_form[row][col] = 1
+
+            # Left
+            elif direction == 2:
+                if col == 0: shape_form[row].insert(0, 1)
+                else: col -= 1
+                addPaddingRows(shape_form, True)
+
+            # Right
+            elif direction == -2:
+                if col == len(shape_form[row]) - 1: shape_form[row].append(1)
+                col += 1
+                addPaddingRows(shape_form, False)
+
+        # Add (and add) the crosses
+        crosses = []
+        row_var = -1, -1,  0,  1,  1,  1,  0, -1
+        col_var =  0,  1,  1,  1,  0, -1, -1,  0
+        row_max = len(shape_form) - 1
+        for row in range(len(shape_form)):
+            col_max = len(shape_form[row]) - 1
+            for col in range(len(shape_form[row])):
+                if shape_form[row][col] == 1: continue
+                streak = 0
+                for i in range(len(row_var)):
+                    row_adj = row + row_var[i]
+                    col_adj = col + col_var[i]
+                    if row_adj < 0 or col_adj < 0 or row_adj > row_max or col_adj > col_max: continue
+                    if streak == 0 and abs(row_var[i]) + abs(col_var[i]) == 2: continue # To avoiding starting to count occupied cells in the corner
+                    if shape_form[row_adj][col_adj] == 1: streak += 1
+
+                    if streak == 3:
+                        shape_form[row][col] = "X"
+                        crosses.append(self.cellList[row][col])
+                        break
+
+        return shape_form, crosses
     
 
 
@@ -1018,44 +1021,17 @@ class Board:
         return adjacent_cells
     
 
-    def findCrosses(self, shape: list[Cell], shape_type: str) -> list[Cell]:
-        crosses = []
-        adjacency = set() # To avoid duplications
-
-        # Get empty adjacent cells
-        for cell in shape: 
-            adj_cells = self.getAdjacentCells(cell, unoccupied_only=True, exclude=shape)
-            for adj_cell in adj_cells:
-                if adj_cell.flagOccupied: adjacency.add(adj_cell)
-
-        # Occupy the cells temporarily
-        for cell in shape: cell.putShapeCell(shape_type)
-        
-        # Find crosses
-        for cell in adjacency:
-            if self.madeSquares([cell]): crosses.append(cell)
-
-        # Desoccupy the cells
-        for cell in shape: cell.desoccupyCell()
-
-        return crosses
-    
-
-    def addShape(self, shapes: list, shape_original: list, directions: list, other_crosses:
-                 list, already_found_shapes: set[frozenset[Cell]]):
+    def addShape(self, shapes: list, shape_original: list, directions: list, already_found_shapes: set[frozenset[Cell]]):
         
         frozen_shape = frozenset(shape_original)
         if frozen_shape in already_found_shapes: return
-        already_found_shapes.add(frozen_shape)
         shape = shape_original.copy()
         shape_type = whichShape(directions)
-        if shape_type not in "LITS": return
-        shape_form = createShapeForm(directions)
-        crosses = self.findCrosses(shape, shape_type)
-        crosses.extend(other_crosses)
-        crosses = list(set(crosses)) # Eliminate duplicated values
+        if not shape_type: return
+        shape_form, crosses = self.getShapeFormAndCrosses(directions)
+        already_found_shapes.add(frozen_shape)
         new_elem = (shape_type, shape_form, shape, crosses)
-        if new_elem not in shapes: shapes.append(new_elem)
+        shapes.append(new_elem)
     
 
     def cellDirection(self, cell1: Cell, cell2: Cell) -> int:
@@ -1084,7 +1060,6 @@ class Board:
         # Initialize variables
         stack = []
         shapes = []
-        crosses = []
         direction = 0 # up: 1, down: -1, left: 2, right: -2
         directions = [] # Directions are used to determine the shape
         current_cell = cell
@@ -1097,7 +1072,7 @@ class Board:
         while stack:
 
             if num_cells == 4 or not stack[-1]:
-                if num_cells == 4: self.addShape(shapes, shape, directions, crosses, already_found_shapes)
+                if num_cells == 4: self.addShape(shapes, shape, directions, already_found_shapes)
                 else: stack.pop()
                 if directions: directions.pop()
                 assert current_cell == shape[-1]
@@ -1114,11 +1089,10 @@ class Board:
                     t_directions.append(self.cellDirection(shape[-2], possible_cell))
                     t_shape = shape.copy()
                     t_shape.append(possible_cell)
-                    self.addShape(shapes, shape, directions, crosses, already_found_shapes)
+                    self.addShape(shapes, t_shape, t_directions, already_found_shapes)
 
             else:
                 if self.madeSquares([stack[-1][-1]]): # If adding the next cell causes a square, just skip that cell
-                    crosses.append(stack[-1][-1])
                     stack[-1].pop()
                     continue
                 direction = self.cellDirection(current_cell, stack[-1][-1])
