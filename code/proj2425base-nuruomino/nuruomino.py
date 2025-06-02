@@ -282,6 +282,8 @@ class Region:
     
     #calculates the score for the priority queue
     def calculateScore(self) -> int:
+        if self.flagOccupied:
+            return 0
         return self.numSquares - self.numRestrictions*0.25
 
     def isOccupied(self) -> bool:
@@ -608,18 +610,20 @@ class Board:
         if found:return self.regionList[index]
         else: return False
         
-    def shapeRegion(self,regionValue,shape,shapeForm,isToInsert):
+    #returns possible spots for shape and shapeForm in a region
+    def getShapeRegion(self,regionValue,shape,shapeForm):
         region = self.findRegion(regionValue)
         if region.isOccupied():
-            return False, [], []
-                    
+            return False, [], [], []  
+
         possibleSpots = []
         startIndex = -1
         maxIndex = len(region.cells)
         stop = False
         cellsWithShape = []
         cellsWithX = []
-        while startIndex<maxIndex:   
+        
+        while startIndex < maxIndex: 
             worked = False
             while not worked:
                 #while its empty, it keeps going -> stops when we occupy all 4 cells
@@ -630,7 +634,9 @@ class Board:
                 cellsFromOtherRegion,cellsOccupied,worked,cellsFilledWithShape,cellsFilledWithX = region.putShape(startIndex,shape,shapeForm)
                 if not worked: 
                     self.desocuppyCells(cellsOccupied)
-                
+                else:
+                    if regionValue == 7 and shape == "I":
+                        print("worked at index",startIndex)
             if not stop:
                 desocupyFlag = False
                 
@@ -658,22 +664,54 @@ class Board:
 
                 if not desocupyFlag: 
                     #we save the spot in a list and clear the cells -> we need to choose the best spot (the one with the best score)
-                    score = len(cellsFromOtherRegion) #the less the better
-                    possibleSpots.append(((startIndex,shape,shapeForm),score))
+                    score = len(cellsFromOtherRegion) #the less restrictions on other regions the better
+                    possibleSpots.append((score,self.getTouching(cellsFilledWithShape,shape),(startIndex,shape,shapeForm)))
                     self.desocuppyCells(cellsOccupied)
                     for cell in cellsFilledWithShape:
                         cellsWithShape.append(cell)
                     for cell in cellsFilledWithX:
                         cellsWithX.append(cell)
 
-        if isToInsert and len(possibleSpots) > 0:      
-            bestInfo = self.getBestScoreShape(possibleSpots)
-            self.putShapeRegion(bestInfo,region)
-            self.updatePriorityQueue()
+        if len(possibleSpots) > 0:
+            possibleSpots = sorted(possibleSpots, key=lambda x: (x[0], x[1]))
+            return True, cellsWithShape, cellsWithX, possibleSpots    
         else:
-            if len(possibleSpots) > 0:
-                return True, cellsWithShape, cellsWithX
-            return False, [], []
+            return False, [], [], []       
+    
+    def getBestScoreShape(self,possibleSpots):
+        #possibleSpots = startIndex,shape,shapeForm,score
+        minScore = possibleSpots[0][1]
+        bestTouching = possibleSpots[0][2]
+        best = possibleSpots[0][0]
+        for (info,score,touching) in possibleSpots:
+            if score < minScore:
+                minScore = score
+                best = (info)
+            elif score == minScore:
+                #we chose the one who touches the most shapes from other regions
+                if touching>bestTouching:
+                    best = (info)
+                    bestTouching = touching
+                
+        return best
+        
+    def getTouching(self,cellsOccupied,shape):
+        #returns the number of shapes from other regions that this shape is touching
+        res = 0
+        cellsAdjacent = set()
+        values = []
+        for cell in cellsOccupied:
+            listAdjacentCells = self.adjacents_positions_without_diagonals(cell.row,cell.col)
+            for row,col in listAdjacentCells:
+                cellsAdjacent.add((row,col))
+            
+        for row,col in cellsAdjacent:
+            value = self.get_value(row,col)
+            if value != shape and value not in values and value in ["L","I","T","S"]:
+                #dont count with this region's cell
+                values.append(value)
+                res+=1
+        return res
         
     def madeSquares(self,cellsOccupied):
         max = self.size
@@ -716,7 +754,8 @@ class Board:
                                     return True
         return False   
     
-    def putShapeRegion(self,info,region):
+    def putShapeRegion(self,info,regionValue):
+        region = self.findRegion(regionValue)
         startIndex = info[0]
         shape = info[1]
         shapeForm = info[2]
@@ -727,6 +766,7 @@ class Board:
             region = self.findRegion(cell.regionValue)
             region.updateSquares()
         self.restrictAdjacents(cellsFilledWithShape,shape)
+        self.updatePriorityQueue()
         
     def restrictAdjacents(self,cellsOccupied,shape):
         visited = set()
@@ -748,11 +788,18 @@ class Board:
     def getBestScoreShape(self,possibleSpots):
         #possibleSpots = startIndex,shape,shapeForm,score
         minScore = possibleSpots[0][1]
+        bestTouching = possibleSpots[0][2]
         best = possibleSpots[0][0]
-        for (info,score) in possibleSpots:
+        for (info,score,touching) in possibleSpots:
             if score < minScore:
                 minScore = score
                 best = (info)
+            elif score == minScore:
+                #we chose the one who touches the most shapes from other regions
+                if touching>bestTouching:
+                    best = (info)
+                    bestTouching = touching
+                
         return best
     
     def desocuppyCells(self,cellsOccupied):
@@ -820,8 +867,8 @@ class Nuruomino(Problem):
                 if(crosses):
                     for (r,c) in crosses:
                         shapeForm[r][c] = "X"
-                board.shapeRegion(region.value,shape,shapeForm,True)
-                #print("fill region",region.value,shape,shapeForm)
+                board.putShapeRegion((0,shape,shapeForm),region.value)
+                print("fill region",region.value,shape,shapeForm)
                 
     def findCrosses(self,shapeForm):
         crossesIndexes = []
@@ -869,22 +916,26 @@ class Nuruomino(Problem):
         overlappedCellsX = []
         cellsShapeOverlap = []
         if region.numSquares == 4:
+            print("region with 4 squares",region.value)
             #we can simply put the supposed piece, since it is a 4 piece region
-            action = region.getShape() #action = (shape,shapeForm)
-            crosses = self.findCrosses(action[1])
+            shape,shapeForm = region.getShape() #action = (shape,shapeForm)
+            crosses = self.findCrosses(shapeForm)
             if(crosses):
                     for (r,c) in crosses:
-                        action[1][r][c] = "X"
-            listActions.append((region.value,action))
+                        shapeForm[r][c] = "X"
+            listActions.append((region.value,(0,shape,shapeForm)))
         else:
-            #print("for region",region.value)
+            print("for region",region.value)
             #the region has more than 4 squares, so we need to test each shape and shapeForm
             firstFlag = True
             for shape in shapeDict:
                 for shapeForm in shapeDict[shape]:
-                    worked, cellsWithShape, cellsWithX = board.shapeRegion(region.value,shape,[row[:] for row in shapeForm],False)  
+                    worked, cellsWithShape, cellsWithX, possibleSpots = board.getShapeRegion(region.value,shape,[row[:] for row in shapeForm])  
                     if worked:
-                        listActions.append((region.value,(shape,shapeForm)))
+                        print("possible spots",possibleSpots)
+                        for elem in possibleSpots:
+                            print("action added:",region.value, elem[2])
+                            listActions.append((region.value, elem[2]))
                         if firstFlag:
                             firstFlag = False
                             overlappedCellsShape = cellsWithShape
@@ -908,6 +959,7 @@ class Nuruomino(Problem):
         #print("found X overlap at:")   
         #for cell in overlappedCellsX:
         #    print(cell.row,cell.col)
+        print("listActions",listActions)
         return listActions       
 
     def result(self, state: NuruominoState, action):
@@ -915,28 +967,33 @@ class Nuruomino(Problem):
         'state' passado como argumento. A ação a executar deve ser uma
         das presentes na lista obtida pela execução de
         self.actions(state)."""
-        listActions = self.actions(state) #listActions = [(regionValue,(shape,shapeForm))]
+        listActions = self.actions(state) #listActions = [(index, regionValue,(shape,shapeForm))]
         
         if len(action) == 2:
-            #action -> (regionValue, (shape, form of shape))
+            print(action)
+            #action -> (regionValue, (index, shape, form of shape))
             regionValue = action[0]
-            shape = action[1][0]
-            shapeForm = action[1][1]
+            info = action[1]
+            index = info[0]
+            shape = info[1]
+            shapeForm = info[2]
         else:
-            #action -> (regionValue, shape, form of shape)
-            regionValue = action[0]
-            shape = action[1]
-            shapeForm = action[2]
+            print("action with len !=2",action)
             
-        newState = NuruominoState(state.board.copy()) #copies the board, but with new reference
-        if (regionValue,(shape,shapeForm)) in listActions:
+        if (regionValue,(info)) in listActions:
+            if(regionValue == 7 and shape =="I"):
+                print("actions",listActions)
             #the action is in listActions, so we do it
-            newState.board.shapeRegion(regionValue,shape,shapeForm,True)
+            newState = NuruominoState(state.board.copy()) #copies the board, but with new reference
+            newState.board.putShapeRegion(info,regionValue)
+            
+            print("for region",regionValue,shape,shapeForm)
+            print(newState.board.priorityQueueScores)
             print(newState.board.print())
             return newState
         else:
             #the action is not in listActions, so it is not a possible action
-            return state
+            return None
         
 
     def goal_test(self, state: NuruominoState):
