@@ -764,6 +764,9 @@ class Board:
                         regionToSolve = region
         #print("regionToSolve",regionToSolve.value)  
         #print("possibilities",regionToSolve.possibilities) 
+        if first:
+            #no possibilities in any region
+            return []
         return regionToSolve.possibilities
 
     def verifyConnectivity(self):
@@ -803,7 +806,7 @@ class Nuruomino(Problem):
         """Retorna a lista de ações da região com menos possibilidades"""
         
         board = state.board
-        return board.solve()     
+        return board.solve()    
 
     def result(self, state: NuruominoState, action):
         """Retorna o estado resultante de executar a 'action' sobre
@@ -813,7 +816,7 @@ class Nuruomino(Problem):
         board = state.board.copy()
         #print("do action",action)
         board.doAction(action)
-        #print(board.print())
+        print(board.print())
         return NuruominoState(board)
         
 
