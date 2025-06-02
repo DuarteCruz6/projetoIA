@@ -547,17 +547,8 @@ class Board:
         # Search for shapes
         while stack:
 
-            if num_cells == 4 or not stack[-1]:
-                if num_cells == 4: self.addShape(shapes, shape, directions, already_found_shapes)
-                else: stack.pop()
-                if directions: directions.pop()
-                assert current_cell == shape[-1]
-                shape.pop()
-                num_cells -= 1
-                if shape: current_cell = shape[-1]
-
-            elif num_cells == 3 and allEqual(directions) and tuple(shape) not in possible_T_verified: # Try to add T shapes
-                possible_T_verified.add(tuple(shape))
+            if num_cells == 3 and allEqual(directions) and frozenset(shape) not in possible_T_verified: # Try to add T shapes
+                possible_T_verified.add(frozenset(shape))
                 possible_cells = self.getAdjacentCells(shape[-2], same_region_only=True, exclude=shape)
                 for possible_cell in possible_cells:
                     t_directions = directions.copy()
@@ -566,6 +557,15 @@ class Board:
                     t_shape = shape.copy()
                     t_shape.append(possible_cell)
                     self.addShape(shapes, t_shape, t_directions, already_found_shapes)
+
+            elif num_cells == 4 or not stack[-1]:
+                if num_cells == 4: self.addShape(shapes, shape, directions, already_found_shapes)
+                else: stack.pop()
+                if directions: directions.pop()
+                assert current_cell == shape[-1]
+                shape.pop()
+                num_cells -= 1
+                if shape: current_cell = shape[-1]
 
             else:
                 direction = self.cellDirection(current_cell, stack[-1][-1])
