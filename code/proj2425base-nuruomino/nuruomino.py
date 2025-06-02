@@ -699,6 +699,7 @@ class Board:
             
     def doOverlap(self):
         for region in self.regionList:
+            regionTouching = []
             overlappedCoords, overlappedShape = self.doOverlapRegion(region)
             if overlappedShape in ["L","I","T","S"]:
                 #the region has a shape
@@ -714,8 +715,26 @@ class Board:
             for regionToCheck in regionTouching:   
                 self.verifyShapes(regionToCheck) #verifies all actions of the adjacent regions -> checks for squares
                 
-            
-
+    def doAction(self,action): 
+        #possibility = (shape, cellsOccupied, regionTouching)
+        shape = action[0]
+        cellsOccupied = action[1]
+        
+        coords = list(cellsOccupied)[0]
+        
+        row,col = coords
+        regionValue = self.get_region_cell(row,col)
+        region = self.findRegion(regionValue)
+        
+        region.putShape(shape,cellsOccupied) #puts the shape on region
+        
+        regionTouching = action[2]
+        for regionToRemove in regionTouching:
+            self.removeTouching(regionToRemove, shape, cellsOccupied) #verifies all actions of the adjacent regions -> checks for touching with same shape
+        for row,col in cellsOccupied:
+            self.fillCell(row,col,shape)            
+        
+        self.doOverlap()
     
     def preProcess(self):
         #goes through every region andc
@@ -739,18 +758,37 @@ class Board:
                     if len(region.possibilities) < minPossibilities:
                         minPossibilities = len(region.possibilities)
                         regionToSolve = region
+        print("regionToSolve",regionToSolve.value)  
+        print("possibilities",regionToSolve.possibilities) 
+        return regionToSolve.possibilities
+
+    def verifyConnectivity(self):
+        rows = self.size
+        cols = self.size
         
-        if minPossibilities == 1:
-            print(f"solve region {regionToSolve.value} with only one action")
-        else:
-            print(regionToSolve.possibilities)
-            print(f"solve region {regionToSolve.value} with {minPossibilities} actions")
+        for r in range(1,rows+1):
+            for c in range(1,cols+1):
+                if self.get_value(r,c) in ["L","I","T","S"]:
+                    #we found the first cell with shape
+                    start = (r,c)
+                    break
+        
+        visitted = set() 
+        queue = [start]    
+        
+        while queue:
+            r,c = queue.pop()
+            if (r,c) in visitted:
+                #cell already seen
+                continue    
+            visitted.add((r,c))
+            for newR, newC in self.adjacents_positions_without_diagonals(r,c):
+                if self.get_value(newR,newC) in ["L","I","T","S"] and (newR,newC) not in visitted:
+                    #new cell to check
+                    queue.append((newR,newC))
+                    
+        return len(visitted) == len(self.regionList) * 4
             
-        return regionToSolve
-            
-          
-        
-        
 
 class Nuruomino(Problem):
     def __init__(self, board: Board):
@@ -758,24 +796,34 @@ class Nuruomino(Problem):
         self.initial = NuruominoState(board)
 
     def actions(self, state: NuruominoState):
-        """Retorna uma lista de ações que podem ser executadas a
-        partir do estado passado como argumento."""
+        """Retorna a lista de ações da região com menos possibilidades"""
         
-        return None       
+        board = state.board
+        return board.solve()     
 
     def result(self, state: NuruominoState, action):
         """Retorna o estado resultante de executar a 'action' sobre
         'state' passado como argumento. A ação a executar deve ser uma
         das presentes na lista obtida pela execução de
         self.actions(state)."""
-        return None
+
+        board = state.board.copy()
+        board.doAction(action)
+        print(board.print())
+        return NuruominoState(board)
         
 
     def goal_test(self, state: NuruominoState):
         """Retorna True se e só se o estado passado como argumento é
         um estado objetivo. Deve verificar se todas as posições do tabuleiro
         estão preenchidas de acordo com as regras do problema."""
-        return None
+        #checks if every region is occupied 
+        for region in state.board.regionList:
+            if not region.isFilled:
+                return False
+            
+        #checks if every shape is touching
+        return state.board.verifyConnectivity()
 
     def h(self, node: Node):
         """Função heuristica utilizada para a procura A*."""
@@ -789,10 +837,10 @@ if __name__ == "__main__":
     board.preProcess()
     board.solve()
     
-    #solution_node = depth_limited_search(problem)
-    #if isinstance(solution_node,str) or solution_node == None:
-    #    print("No solution found")
-    #else:
-    #    #found solution
-    #    solution_state = solution_node.state
-    #    print(solution_state.board.print())
+    solution_node = depth_first_graph_search(problem)
+    if isinstance(solution_node,str) or solution_node == None:
+        print("No solution found")
+    else:
+        #found solution
+        solution_state = solution_node.state
+        print(solution_state.board.print())
