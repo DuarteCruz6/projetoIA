@@ -730,9 +730,9 @@ class Board:
             for cell in row:
                 value = cell.get_value()
                 if value == "X":
-                    res+= f"{cell.regionValue} "
+                    res+= f"{cell.regionValue}\t"
                 else:
-                    res+= f"{value} "
+                    res+= f"{value}\t"
             res += "\n"
         return res
     
@@ -1206,28 +1206,30 @@ class Nuruomino(Problem):
         else:
             #print("for region",region.value)
             #the region has more than 4 squares, so we need to test each shape and shapeForm
-            firstFlag = True
-            for shape in shapeDict:
-                for shapeForm in shapeDict[shape]:
-                    worked, cellsWithShape, cellsWithX = board.shapeRegion(region.value,shape,[row[:] for row in shapeForm],False)  
-                    if worked:
-                        listActions.append((region.value,(shape,shapeForm)))
-                        if firstFlag:
-                            firstFlag = False
-                            overlappedCellsShape = cellsWithShape
-                            overlappedCellsX = cellsWithX
-                            for cell in overlappedCellsShape:
-                               if shape not in cellsShapeOverlap:
-                                    cellsShapeOverlap.append(shape)
-                        else:
-                            #check for overlaps in shaped  cells
-                            overlappedCellsShape = [cell for cell in overlappedCellsShape if cell in cellsWithShape]
-                            for cell in overlappedCellsShape:
-                                if shape not in cellsShapeOverlap:
-                                    cellsShapeOverlap.append(shape)
-                                    
-                            #check for overlap in X cells
-                            overlappedCellsX = [cell for cell in overlappedCellsX if cell in cellsWithX]
+            print(board.possibleShapes(region))
+            
+            #firstFlag = True
+            #for shape in shapeDict:
+            #    for shapeForm in shapeDict[shape]:
+            #        worked, cellsWithShape, cellsWithX = board.shapeRegion(region.value,shape,[row[:] for row in shapeForm],False)  
+            #        if worked:
+            #            listActions.append((region.value,(shape,shapeForm)))
+            #            if firstFlag:
+            #                firstFlag = False
+            #                overlappedCellsShape = cellsWithShape
+            #                overlappedCellsX = cellsWithX
+            #                for cell in overlappedCellsShape:
+            #                   if shape not in cellsShapeOverlap:
+            #                        cellsShapeOverlap.append(shape)
+            #            else:
+            #                #check for overlaps in shaped  cells
+            #                overlappedCellsShape = [cell for cell in overlappedCellsShape if cell in cellsWithShape]
+            #                for cell in overlappedCellsShape:
+            #                    if shape not in cellsShapeOverlap:
+            #                        cellsShapeOverlap.append(shape)
+            #                        
+            #                #check for overlap in X cells
+            #                overlappedCellsX = [cell for cell in overlappedCellsX if cell in cellsWithX]
                                     
         #print("found shape overlap at:")   
         #for cell in overlappedCellsShape:
@@ -1259,7 +1261,7 @@ class Nuruomino(Problem):
         if (regionValue,(shape,shapeForm)) in listActions:
             #the action is in listActions, so we do it
             newState.board.shapeRegion(regionValue,shape,shapeForm,True)
-            #print(newState.board.print())
+            print(newState.board.print())
             return newState
         else:
             #the action is not in listActions, so it is not a possible action
