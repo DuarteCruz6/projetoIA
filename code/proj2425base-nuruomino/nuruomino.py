@@ -1121,13 +1121,13 @@ class Board:
         '''
         Returns a list of (shape, shapeForm, cellsWithShape, cellsWithX)
         '''
-        possible_shapes = set()
+        possible_shapes = list()
         region_cells = region.getCells()
 
         for cell in region_cells:
-            possible_shapes.add(self.getPossibleShapesStartingOnCell(cell))
+            possible_shapes.append(self.getPossibleShapesStartingOnCell(cell))
 
-        return list(possible_shapes)
+        return possible_shapes
     
 
 
