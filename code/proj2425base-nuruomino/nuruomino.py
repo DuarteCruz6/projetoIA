@@ -421,34 +421,34 @@ class Board:
             #we need to check above, under, right and left values 
             if row>1:
                 #we need to check the above position
-                if self.get_value(row-1,col) in ["L","S","T","I"]:
+                if self.get_value(row-1,col) in ["L","S","T","I"] or (row-1,col) in cellsOccupied:
                     #the above position is occupied, so now we need to check the left and the right
                     if col>1:
-                        if self.get_value(row,col-1) in ["L","S","T","I"]:
+                        if self.get_value(row,col-1) in ["L","S","T","I"] or (row,col-1) in cellsOccupied:
                             #the left position is occupied, so now we need to check the top left corner
-                            if self.get_value(row-1,col-1) in ["L","S","T","I"]:
+                            if self.get_value(row-1,col-1) in ["L","S","T","I"] or (row-1,col-1) in cellsOccupied:
                                 #it made a square
                                 return True
                     if col<max:
-                        if self.get_value(row,col+1) in ["L","S","T","I"]:
+                        if self.get_value(row,col+1) in ["L","S","T","I"] or (row,col+1) in cellsOccupied:
                             #the right position is occupied, so now we need to check the top right corner
-                            if self.get_value(row-1,col+1) in ["L","S","T","I"]:
+                            if self.get_value(row-1,col+1) in ["L","S","T","I"] or (row-1,col+1) in cellsOccupied:
                                 #it made a square
                                 return True
             if row<max:
                 #we need to check the under position
-                if self.get_value(row+1,col) in ["L","S","T","I"]:
+                if self.get_value(row+1,col) in ["L","S","T","I"] or (row+1,col) in cellsOccupied:
                     #the under position is occupied, so now we need to check the left and the right
                     if col>1:
-                        if self.get_value(row,col-1) in ["L","S","T","I"]:
+                        if self.get_value(row,col-1) in ["L","S","T","I"] or (row,col-1) in cellsOccupied:
                             #the left position is occupied, so now we need to check the bottom left corner
-                            if self.get_value(row+1,col-1) in ["L","S","T","I"]:
+                            if self.get_value(row+1,col-1) in ["L","S","T","I"] or (row+1,col-1) in cellsOccupied:
                                 #it made a square
                                 return True
                     if col<max:
-                        if self.get_value(row,col+1) in ["L","S","T","I"]:
+                        if self.get_value(row,col+1) in ["L","S","T","I"] or (row,col+1) in cellsOccupied:
                             #the right position is occupied, so now we need to check the bottom right corner
-                            if self.get_value(row+1,col+1) in ["L","S","T","I"]:
+                            if self.get_value(row+1,col+1) in ["L","S","T","I"] or (row+1,col+1) in cellsOccupied:
                                 #it made a square
                                 return True
         return False   
@@ -699,21 +699,22 @@ class Board:
             
     def doOverlap(self):
         for region in self.regionList:
-            regionTouching = []
-            overlappedCoords, overlappedShape = self.doOverlapRegion(region)
-            if overlappedShape in ["L","I","T","S"]:
-                #the region has a shape
-                regionTouching, _ = region.putShape(overlappedShape,overlappedCoords) #puts the shape on region
-                for regionToRemove in regionTouching:
-                    self.removeTouching(regionToRemove, overlappedShape, overlappedCoords) #verifies all actions of the adjacent regions -> checks for touching with same shape
-            elif len(overlappedCoords)>0:
-                regionTouching = self.getRegionTouching(overlappedCoords,region.value)
+            if not region.isFilled:
+                regionTouching = []
+                overlappedCoords, overlappedShape = self.doOverlapRegion(region)
+                if overlappedShape in ["L","I","T","S"]:
+                    #the region has a shape
+                    regionTouching, _ = region.putShape(overlappedShape,overlappedCoords) #puts the shape on region
+                    for regionToRemove in regionTouching:
+                        self.removeTouching(regionToRemove, overlappedShape, overlappedCoords) #verifies all actions of the adjacent regions -> checks for touching with same shape
+                elif len(overlappedCoords)>0:
+                    regionTouching = self.getRegionTouching(overlappedCoords,region.value)
 
-            for row,col in overlappedCoords:
-                self.fillCell(row,col,overlappedShape)
-                
-            for regionToCheck in regionTouching:   
-                self.verifyShapes(regionToCheck) #verifies all actions of the adjacent regions -> checks for squares
+                for row,col in overlappedCoords:
+                    self.fillCell(row,col,overlappedShape)
+
+                for regionToCheck in regionTouching:   
+                    self.verifyShapes(regionToCheck) #verifies all actions of the adjacent regions -> checks for squares
                 
     def doAction(self,action): 
         #possibility = (shape, cellsOccupied, regionTouching)
@@ -732,7 +733,10 @@ class Board:
         for regionToRemove in regionTouching:
             self.removeTouching(regionToRemove, shape, cellsOccupied) #verifies all actions of the adjacent regions -> checks for touching with same shape
         for row,col in cellsOccupied:
-            self.fillCell(row,col,shape)            
+            self.fillCell(row,col,shape)     
+        
+        for regionToCheck in regionTouching:   
+                self.verifyShapes(regionToCheck) #verifies all actions of the adjacent regions -> checks for squares       
         
         self.doOverlap()
     
@@ -758,8 +762,8 @@ class Board:
                     if len(region.possibilities) < minPossibilities:
                         minPossibilities = len(region.possibilities)
                         regionToSolve = region
-        print("regionToSolve",regionToSolve.value)  
-        print("possibilities",regionToSolve.possibilities) 
+        #print("regionToSolve",regionToSolve.value)  
+        #print("possibilities",regionToSolve.possibilities) 
         return regionToSolve.possibilities
 
     def verifyConnectivity(self):
@@ -806,10 +810,10 @@ class Nuruomino(Problem):
         'state' passado como argumento. A ação a executar deve ser uma
         das presentes na lista obtida pela execução de
         self.actions(state)."""
-
         board = state.board.copy()
+        #print("do action",action)
         board.doAction(action)
-        print(board.print())
+        #print(board.print())
         return NuruominoState(board)
         
 
