@@ -223,6 +223,7 @@ def createShapeForm(directions: list[int]) -> list[list]:
 
 
 
+
 #struct Cell
 class Cell:
     def __init__(self, regionValue:int, row:int, col:int):
@@ -279,7 +280,22 @@ class Cell:
             #the cell has to be an X
             self.occupyCell()
             return 1
-        
+    
+    def overlapped(self,shapesList):
+        before = self.choices
+        for shape in before:
+            if shape not in shapesList:
+                self.choices.remove(shape)
+                self.addRestriction(shape)
+        return self.updateChoices()
+    
+    def updateChoices(self):
+        if len(self.choices) == 1:
+            for shape in self.choices:
+                self.putShapeCell(shape)
+                return 1
+        return 0
+    
     # Definition of == operator between cells
     def __eq__(self, other: 'Cell'):
         return self.getRow() == other.getRow() and self.getCol() == other.getCol()
@@ -287,7 +303,7 @@ class Cell:
     # Make Cell hashable
     def __hash__(self):
         return hash((self.getRow(), self.getCol()))
-
+                
 
 #struct Region
 class Region:
@@ -937,10 +953,34 @@ class Board:
                     #new cell to check
                     queue.append((newR,newC))
                     
-        return len(visitted) == len(self.regionList) * 4 
-
-
-
+        return len(visitted) == len(self.regionList) * 4
+    
+    def doOverlap(self, overlappedCellShape, shapes, overlappedCellX):
+        for cell in overlappedCellShape:
+            #print("shape overlap at",cell.row,cell.col,"with shapes",shapes)
+            region = self.findRegion(cell.regionValue)
+            if cell.overlapped(shapes) == 1:
+                #the cell was filled
+                shape = cell.shape
+                for shapeForm in shapeDict[shape]:
+                    #print("Mandatory overlapped got a shape")
+                    self.shapeRegion(self,cell.regionValue,cell.shape,shapeForm,True)
+            else:
+                for shape in [s for s in ["L", "I", "T", "S"] if s not in shapes]:
+                    if cell.addRestriction(shape) == 1:
+                        #the cell is now an X since it has all restrictions
+                        region.updateSquares()
+                    else:    
+                        region.updateRestriction()
+            
+        for cell in overlappedCellX:
+            #print("X overlap at",cell.row,cell.col)
+            region = self.findRegion(cell.regionValue)
+            cell.occupyCell()
+            region.updateRestriction()
+            
+        self.updatePriorityQueue()
+    
     def getAdjacentCells(self, cell: Cell, same_region_only: bool = False, 
                          unoccupied_only: bool = False, exclude: list[Cell] = None):
         if exclude is None: exclude = []
