@@ -575,9 +575,9 @@ class Board:
             for cell in row:
                 value = cell.get_value()
                 if value == "X":
-                    res+= f"{cell.regionValue} "
+                    res+= f"{cell.regionValue}\t"
                 else:
-                    res+= f"{value} "
+                    res+= f"{value}\t"
             res += "\n"
         return res
     
@@ -932,7 +932,7 @@ class Nuruomino(Problem):
         if (regionValue,(shape,shapeForm)) in listActions:
             #the action is in listActions, so we do it
             newState.board.shapeRegion(regionValue,shape,shapeForm,True)
-            #print(newState.board.print())
+            print(newState.board.print())
             return newState
         else:
             #the action is not in listActions, so it is not a possible action
@@ -971,7 +971,7 @@ if __name__ == "__main__":
     problem = Nuruomino(board)
     problem.fillAuto(problem.initial)
     solution_node = depth_limited_search(problem)
-    if isinstance(solution_node,str):
+    if isinstance(solution_node,str) or solution_node == None:
         print("No solution found")
     else:
         #found solution
