@@ -759,8 +759,6 @@ class Board:
         
         for region in self.regionList:
             if not region.isFilled:
-                print("region",region.value)
-                print("possibilities",region.possibilities)
                 if first:
                     minPossibilities = len(region.possibilities)
                     regionToSolve = region
@@ -768,9 +766,7 @@ class Board:
                 else:
                     if len(region.possibilities) < minPossibilities:
                         minPossibilities = len(region.possibilities)
-                        regionToSolve = region
-        #print("regionToSolve",regionToSolve.value)  
-        #print("possibilities",regionToSolve.possibilities) 
+                        regionToSolve = region 
         if first:
             #no possibilities in any region
             return []
@@ -821,9 +817,7 @@ class Nuruomino(Problem):
         das presentes na lista obtida pela execução de
         self.actions(state)."""
         board = state.board.copy()
-        #print("do action",action)
         board.doAction(action)
-        print(board.print())
         return NuruominoState(board)
         
 
@@ -849,7 +843,6 @@ if __name__ == "__main__":
     board = Board.parse_instance()
     problem = Nuruomino(board)
     board.preProcess()
-    print(board.print())
     board.solve()
     
     solution_node = depth_first_graph_search(problem)
