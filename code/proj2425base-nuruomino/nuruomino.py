@@ -409,16 +409,15 @@ class Board:
     
     #prints the board
     def print(self) -> str:
-        res = ""
         for row in self.cellList:
+            r = ""
             for cell in row:
                 value = cell.get_value()
                 if value == "X":
-                    res+= f"{cell.regionValue}\t"
+                    r+= f"{cell.regionValue}\t"
                 else:
-                    res+= f"{value}\t"
-            res += "\n"
-        return res       
+                    r+= f"{value}\t"
+            print(r)     
         
     def madeSquares(self,cellsOccupied):
         max = self.size
@@ -845,10 +844,10 @@ if __name__ == "__main__":
     board.preProcess()
     board.solve()
     
-    solution_node = depth_first_graph_search(problem)
+    solution_node = depth_first_tree_search(problem)
     if isinstance(solution_node,str) or solution_node == None:
         print("No solution found")
     else:
         #found solution
         solution_state = solution_node.state
-        print(solution_state.board.print())
+        solution_state.board.print()
