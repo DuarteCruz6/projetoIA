@@ -615,6 +615,7 @@ class Board:
     
     def addActionsToRegions(self,region):
         possibleActions = board.possibleShapes(region) 
+        listPossibilities = []
         for shape,cellsOccupied in possibleActions:
             coords = set()
             for cell in cellsOccupied:
@@ -631,7 +632,11 @@ class Board:
             if len(adjacentRegions) == 0:
                 #its impossible for the shape to touch any other shape
                 continue
-            region.addPossibility((shape,coords,adjacentRegions))
+            #region.addPossibility((shape,coords,adjacentRegions))
+            listPossibilities.append((shape,coords,adjacentRegions))
+        sorted_list = sorted(listPossibilities, key=lambda x: len(x[2]))
+        for possibility in sorted_list:
+            region.addPossibility(possibility)
             
     def doOverlapRegion(self,region):
         first = True
@@ -783,30 +788,24 @@ class Board:
             if regionAdjacentValue not in regionTouching:
                 regionAdjacent = self.findRegion(regionAdjacentValue)
                 regionAdjacent.regionAdjacents.remove(regionValue) #removes the original region from the regionAdjacent adjacent's
-                
-        removed = self.checkIsland() #checks for islands -> isolated regions   
-        
-        while removed:
+                 
+        check = True 
+        while check:
             #if removed, needs to check again for islands
-           removed = self.checkIsland() 
-        
-        self.doOverlap()
-        
-        removed = self.checkIsland() #checks for islands -> isolated regions   
-        
-        while removed:
-            #if removed, needs to check again for islands
-           removed = self.checkIsland() 
+            removed = self.checkIsland() #checks for islands -> isolated regions 
+            overlapped = self.doOverlap() #fills all overlapped cells
+            check = removed or overlapped
     
     def preProcess(self):
         #goes through every region and
         self.addActions() #1- checks every possible action 
-        removed = self.checkIsland() #2- checks for islands -> isolated regions
-        while removed:
+        check = True 
+        while check:
             #if removed, needs to check again for islands
-           removed = self.checkIsland() 
-        self.doOverlap() #3- does overlap and #4- removes possibilities from adjacent regions
-  
+            removed = self.checkIsland() #2- checks for islands -> isolated regions
+            overlapped = self.doOverlap() #3- does overlap and #4- removes possibilities from adjacent regions
+            check = removed or overlapped #if there were any changes, then we loop
+        
                 
     def solve(self):
         #chooses the region with the less possibilities
@@ -855,7 +854,17 @@ class Board:
                     queue.append((newR,newC))
                     
         return len(visitted) == len(self.regionList) * 4
-            
+    
+    def getHeuristic(self):
+        total = 0
+        for region in self.regionList:
+            if not region.isFilled:
+                num_possibilities = len(region.getPossibilities())
+                if num_possibilities == 0:
+                    #reached a dead end
+                    return float('inf')
+                total += (num_possibilities - 1)
+        return total
 
 class Nuruomino(Problem):
     def __init__(self, board: Board):
@@ -892,8 +901,8 @@ class Nuruomino(Problem):
 
     def h(self, node: Node):
         """Função heuristica utilizada para a procura A*."""
-        # TODO
-        pass
+        board = node.state.board
+        return board.getHeuristic()
 
     
 if __name__ == "__main__":
@@ -904,6 +913,7 @@ if __name__ == "__main__":
     board.solve()
     
     solution_node = depth_first_tree_search(problem)
+    #solution_node = astar_search(problem)
     if isinstance(solution_node,str) or solution_node == None:
         print("No solution found")
     else:
