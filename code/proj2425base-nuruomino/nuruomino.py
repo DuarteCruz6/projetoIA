@@ -13,26 +13,6 @@ import numpy as np
 
 ####################### Auxiliar Functions #######################
 
-def zigzagOrder(lst: list) -> list:
-    '''
-    [1, 2, 3, 4] -> [1, 4, 2, 3]\n
-    [1, 2, 3, 4, 5, 6, 7] -> [1, 7, 2, 6, 3, 5, 4]
-    '''
-    zigzag_order = []
-    i = 0
-    j = len(lst) - 1
-
-    while i < j:
-        zigzag_order.append(lst[i])
-        zigzag_order.append(lst[j])
-        i += 1
-        j -= 1
-    
-    if i == j: zigzag_order.append(lst[i])
-
-    return zigzag_order
-
-
 def allEqual(lst: list|tuple) -> bool:
     if not lst: return True
     last_elem = lst[0]
@@ -97,17 +77,10 @@ class Cell:
         self.shape = shape
         self.flagOccupied = True
         
-    # Definition of == operator between cells
-    def __eq__(self, other: 'Cell'):
-        if other is None: return False
-        return self.getRow() == other.getRow() and self.getCol() == other.getCol()
-    
     # Make Cell hashable
     def __hash__(self):
         return hash((self.getRow(), self.getCol()))
-    
-    def __repr__(self):
-        return f"({self.row}, {self.col})"
+
 
 #struct Region
 class Region:
@@ -136,12 +109,6 @@ class Region:
     def addCell(self, newCell:Cell) -> None:
         self.cells.append(newCell) 
     
-    def findCell(self,row,col) -> Cell:
-        for cell in self.cells:
-            if cell.getRow() == row and cell.getCol() == col:
-                return cell
-        return None  
-    
     #adds a possibility to the region
     def addPossibility(self,possibility):
         #possibility = (shape, cellsOccupied, regionTouching)
@@ -149,10 +116,6 @@ class Region:
             self.possibilities.append(possibility)
             for region in possibility[2]:
                 self.regionAdjacents.add(region)
-        
-    def removePossibility(self,possibility):
-        if not self.isFilled:
-            self.possibilities.remove(possibility)
         
     def getPossibilities(self):
         return self.possibilities
@@ -196,9 +159,6 @@ class Region:
             else:
                 possibilitiesUpdated.append(possibility)
         self.possibilities = possibilitiesUpdated
-                
-
-        
 
 class NuruominoState:
     state_id = 0
@@ -252,25 +212,6 @@ class Board:
     def get_region_cell(self,row,col):
         cell = self.cellList[row-1][col-1]
         return cell.get_region()
-     
-    def adjacent_regions(self, regionValue:int) -> list:
-        """Devolve uma lista das regiões que fazem fronteira com a região enviada no argumento."""
-        listAdjacentRegions = []
-        for region in self.regionList:
-            if region.getValue() == regionValue:
-                #found the region
-                for cell in region.getCells():
-                    #goes through every cell in the region and gets all region values of adjacent cells of the current cell
-                    listAdjacentValues = self.adjacent_values(cell.getRow(),cell.getCol()) 
-                    for value in listAdjacentValues:
-                        value = int(value)
-                        #goes through every region value
-                        if value != regionValue and value not in listAdjacentRegions:
-                            #adds the value if it wasnt added before and if it is different than the region that the current cell is in
-                            listAdjacentRegions.append(value)
-                break
-                    
-        return sorted(listAdjacentRegions) #returns it sorted in ascending order [5,2,4,1] -> [1,2,4,5]
     
     def adjacent_positions(self, row:int, col:int) -> list:
         """Devolve as posições adjacentes à região, em todas as direções, incluindo diagonais."""
