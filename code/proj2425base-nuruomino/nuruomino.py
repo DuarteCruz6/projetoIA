@@ -9,6 +9,7 @@
 from sys import stdin
 from search import *  # Import the classes from search.py
 import numpy as np
+#import time
 
 ####################### Auxiliar Functions #######################
 
@@ -727,22 +728,27 @@ class Board:
     def removeActionsIsland(self,regionIsland, regionAdjacent):
         #removes every possibility from regionAdjacent that is not touching regionIsland
         listPossibilitiesAfter = []
+        removed = False
         for possibility in regionAdjacent.possibilities:
             #possibility = (shape, cellsOccupied, regionTouching)
             if regionIsland in possibility[2] and len(possibility[2])>1:
                 #the possibility is touching the island and does a connection to other region
                 listPossibilitiesAfter.append(possibility)
+            else:
+                removed = True
         regionAdjacent.possibilities = listPossibilitiesAfter
+        return removed
         
                     
     def checkIsland(self):
+        removed = False
         for region in self.regionList:
             if len(region.regionAdjacents) == 1:
                 #the region is an island, so every shape from this region needs to touch the adjacent
-                #print("region",region.value,"is an island")
                 regionAdjacentValue = list(region.regionAdjacents)[0]
                 regionAdjacent = self.findRegion(regionAdjacentValue)
-                self.removeActionsIsland(region.value,regionAdjacent)
+                removed = self.removeActionsIsland(region.value,regionAdjacent)
+        return removed
                 
                 
     def doAction(self,action): 
@@ -765,15 +771,35 @@ class Board:
             self.fillCell(row,col,shape)     
         
         for regionToCheck in regionTouching:   
-                self.verifyShapes(regionToCheck) #verifies all actions of the adjacent regions -> checks for squares       
+                self.verifyShapes(regionToCheck) #verifies all actions of the adjacent regions -> checks for squares  
+        
+        for regionAdjacentValue in region.regionAdjacents:
+            if regionAdjacentValue not in regionTouching:
+                regionAdjacent = self.findRegion(regionAdjacentValue)
+                regionAdjacent.regionAdjacents.remove(regionValue) #removes the original region from the regionAdjacent adjacent's
+                
+        removed = self.checkIsland() #checks for islands -> isolated regions   
+        
+        while removed:
+            #if removed, needs to check again for islands
+           removed = self.checkIsland() 
         
         self.doOverlap()
+        
+        removed = self.checkIsland() #checks for islands -> isolated regions   
+        
+        while removed:
+            #if removed, needs to check again for islands
+           removed = self.checkIsland() 
     
     def preProcess(self):
         #goes through every region andc
         self.addActions() #1- checks every possible action 
-        self.doOverlap() #2- does overlap and #3- removes possibilities from adjacent regions
-        self.checkIsland() #4- checks for islands -> isolated regions
+        removed = self.checkIsland() #2- checks for islands -> isolated regions
+        while removed:
+            #if removed, needs to check again for islands
+           removed = self.checkIsland() 
+        self.doOverlap() #3- does overlap and #4- removes possibilities from adjacent regions
   
                 
     def solve(self):
@@ -865,6 +891,7 @@ class Nuruomino(Problem):
 
     
 if __name__ == "__main__":
+    #start = time.time()
     board = Board.parse_instance()
     problem = Nuruomino(board)
     board.preProcess()
@@ -877,3 +904,5 @@ if __name__ == "__main__":
         #found solution
         solution_state = solution_node.state
         solution_state.board.print()
+    #end = time.time()
+    #print(end-start)
