@@ -185,7 +185,19 @@ class Region:
         action = self.possibilities[0]
         self.possibilities = []
         return action[1]
-        
+    
+    def removeRegionAdjacent(self,regionAdjacentValue):
+        self.regionAdjacents.remove(regionAdjacentValue)
+        possibilitiesUpdated = []
+        for possibility in self.possibilities:
+            if regionAdjacentValue in possibility[2] and len(possibility[2]) == 1:
+                #this possibilty needs to be removed
+                continue
+            else:
+                possibilitiesUpdated.append(possibility)
+        self.possibilities = possibilitiesUpdated
+                
+
         
 
 class NuruominoState:
@@ -787,7 +799,7 @@ class Board:
         for regionAdjacentValue in region.regionAdjacents:
             if regionAdjacentValue not in regionTouching:
                 regionAdjacent = self.findRegion(regionAdjacentValue)
-                regionAdjacent.regionAdjacents.remove(regionValue) #removes the original region from the regionAdjacent adjacent's
+                regionAdjacent.removeRegionAdjacent(regionValue) #removes the original region from the regionAdjacent adjacent's
                  
         check = True 
         while check:
