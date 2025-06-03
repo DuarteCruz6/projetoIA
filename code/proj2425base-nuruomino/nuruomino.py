@@ -414,14 +414,20 @@ class Board:
     
     #prints the board
     def print(self) -> str:
+        max = self.size
         for row in self.cellList:
             r = ""
+            c = 0
             for cell in row:
+                c+=1
                 value = cell.get_value()
                 if value == "X":
-                    r+= f"{cell.regionValue}\t"
-                else:
+                    value = cell.regionValue
+                    
+                if c != max:
                     r+= f"{value}\t"
+                else:
+                    r+= f"{value}"
             print(r)     
         
     def madeSquares(self,cellsOccupied):
@@ -793,7 +799,7 @@ class Board:
            removed = self.checkIsland() 
     
     def preProcess(self):
-        #goes through every region andc
+        #goes through every region and
         self.addActions() #1- checks every possible action 
         removed = self.checkIsland() #2- checks for islands -> isolated regions
         while removed:
