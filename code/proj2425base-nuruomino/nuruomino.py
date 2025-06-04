@@ -89,14 +89,14 @@ class Region:
         self.cells = cells #list of cells inside of the region
         self.possibilities = [] #list of actions that are possible in this region
         self.isFilled = False #flag for when the region is filled
-        self.regionAdjacents = set() #list of regions that can be touching to this region's shape
+        self.regionCanTouch = set() #list of regions that can be touching to this region's shape
         
     #used to use this region but with new reference
     def copy(self, copied_cells) -> 'Region':
         copied = Region(self.value, copied_cells)
         copied.possibilities = self.possibilities.copy()
         copied.isFilled = self.isFilled
-        copied.regionAdjacents = self.regionAdjacents.copy()
+        copied.regionCanTouch = self.regionCanTouch.copy()
         return copied
         
     def getValue(self) -> int:
@@ -115,7 +115,7 @@ class Region:
         if not self.isFilled:
             self.possibilities.append(possibility)
             for region in possibility[2]:
-                self.regionAdjacents.add(region)
+                self.regionCanTouch.add(region)
         
     def getPossibilities(self):
         return self.possibilities
@@ -124,7 +124,6 @@ class Region:
         if not self.isFilled:
             finalActions = []
             cells = []
-            #newAdjacentSet = set()
             for shape,cellsOccupied, regionTouching in self.possibilities:
                 if shape == shapeFinal:
                     corresponds = True
@@ -133,18 +132,13 @@ class Region:
                            corresponds = False 
                     if corresponds:
                         finalActions.append((shape,cellsOccupied,regionTouching))
-                        #for regionValue in regionTouching:
-                        #    newAdjacentSet.add(regionValue)
 
             if len(finalActions) == 1:
                 #only one action remains
                 regionTouching = finalActions[0][2]
                 cells = self.fillRegion()
             else:
-                self.possibilities = finalActions
-            
-            #self.regionAdjacents = newAdjacentSet
-
+                self.possibilities = finalActions 
             return regionTouching, cells
 
     #if there is only one action left
@@ -173,6 +167,7 @@ class Board:
         self.cellList = cellList #list of cells (Cell struct)
         self.size = size #size of the board
         self.regionList = regionList #list of regions (Region struct)
+        self.stackRegions = regionList #stack of regions to analyze
     
     #for creating new states with the same board, but with new references
     def copy(self):
@@ -595,11 +590,12 @@ class Board:
                         value = int(value)
                         if value != region.value:
                             adjacentRegions.add(value)
+
             if len(adjacentRegions) == 0:
                 #its impossible for the shape to touch any other shape
                 continue
-            #region.addPossibility((shape,coords,adjacentRegions))
-            listPossibilities.append((shape,coords,adjacentRegions))
+            else:
+                listPossibilities.append((shape,coords,adjacentRegions))
         sorted_list = sorted(listPossibilities, key=lambda x: len(x[2]))
         for possibility in sorted_list:
             region.addPossibility(possibility)
@@ -659,7 +655,7 @@ class Board:
                     newAdjacentSet.add(adjacentValue)
                 
         region.possibilities = actionsAfterCheck
-        region.regionAdjacents = newAdjacentSet
+        region.regionCanTouch = newAdjacentSet
         
     def verifyShapes(self,regionToRemove):
         region = self.findRegion(regionToRemove)
@@ -673,8 +669,7 @@ class Board:
                 for adjacentValue in action[2]:
                     newAdjacentSet.add(adjacentValue)
         region.possibilities = actionsAfterCheck
-        region.regionAdjacents = newAdjacentSet
-        
+        region.regionCanTouch = newAdjacentSet
         
     def addActions(self):
         for region in self.regionList:
@@ -721,23 +716,22 @@ class Board:
                 #it is an island which means it needs to touch the region and also another region
                 if regionValue in possibility[2] and len(possibility[2])>1:
                     #the possibility is touching the region and does a connection to other region
-                    listPossibilitiesAfter.append(possibility)
-                    for adjacentValue in possibility[2]:
-                        newAdjacentSet.add(adjacentValue)
+                    add = False
+                    for check in possibility[2]:
+                        if check in regionToRemove.regionCanTouch and check!=regionValue:
+                            add = True
+                            break
+                    if add:
+                        #the connection is valid
+                        listPossibilitiesAfter.append(possibility)
+                        for adjacentValue in possibility[2]:
+                            if adjacentValue != regionValue:
+                                newAdjacentSet.add(adjacentValue)
                 else:
                     removed = True
-            else:
-                #it is not an island, so we just remove those not touching regionValue
-                if regionValue in possibility[2]:
-                    #the possibility is touching the region and does a connection to other region
-                    listPossibilitiesAfter.append(possibility)
-                    for adjacentValue in possibility[2]:
-                        newAdjacentSet.add(adjacentValue)
-                else:
-                    removed = True
-                
+           
         regionToRemove.possibilities = listPossibilitiesAfter
-        regionToRemove.regionAdjacents = newAdjacentSet
+        regionToRemove.regionCanTouch = newAdjacentSet
         return removed
     
     def removeTouching(self, regionToRemove, regionValue):
@@ -752,41 +746,48 @@ class Board:
                 listPossibilitiesAfter.append(possibility)
                 for adjacentValue in possibility[2]:
                     newAdjacentSet.add(adjacentValue)
-            elif regionValue in possibility[2] and len(possibility[2])>0:
-                #the possibility is touching the region and at least one more region
-                listPossibilitiesAfter.append(possibility)
-                for adjacentValue in possibility[2]:
-                    newAdjacentSet.add(adjacentValue)
+                    
+            elif regionValue in possibility[2] and len(possibility[2])>1:
+                #the possibility is touching the region and at least one more region                    
+                add = False
+                for check in possibility[2]:
+                    if check in regionToRemove.regionCanTouch and check!=regionValue:
+                        add = True
+                        break
+                if add:
+                    #the connection is valid
+                    listPossibilitiesAfter.append(possibility)
+                    for adjacentValue in possibility[2]:
+                        if adjacentValue != regionValue:
+                            newAdjacentSet.add(adjacentValue)
             else:
                 removed = True
                 
         regionToRemove.possibilities = listPossibilitiesAfter
-        regionToRemove.regionAdjacents = newAdjacentSet
+        regionToRemove.regionCanTouch = newAdjacentSet
         return removed
                     
     def checkIsland(self):
         removed = False
         for region in self.regionList:
-            if len(region.regionAdjacents) == 1:
+            if len(region.regionCanTouch) == 1:
                 #the region is an island, so every shape from this region needs to touch the adjacent
-                regionAdjacentValue = list(region.regionAdjacents)[0]
+                regionAdjacentValue = list(region.regionCanTouch)[0]
                 regionAdjacent = self.findRegion(regionAdjacentValue)
                 removed = self.removeNotTouching(regionAdjacent, region.value, True)
         return removed
     
-    def checkRemoveAdjacents(self):
-        removed = False
-        for originalRegion in self.regionList:
-            adjacentsList = originalRegion.regionAdjacents
-            for value in adjacentsList:
-                regionToCheck = self.findRegion(value)
-                if originalRegion.value not in regionToCheck.regionAdjacents:
-                    #the region adjacent has no shapes touching the original region
-                    #so we can remove all actions from originalRegion that only touch regionAdjacent
-                    if (self.removeTouching(originalRegion,regionToCheck.value)):
-                        removed = True
-                    
-        return removed
+    #def checkRemoveAdjacents(self):
+    #    #checks for impossible regions that cant touch eachother
+    #    removed = False
+    #    for region in self.regionList:
+    #        regionsToCheckSet = region.regionCanTouch
+    #        for regionToCheckValue in regionsToCheckSet:
+    #            regionToCheck = self.findRegion(regionToCheckValue)
+    #            if self.removeTouching(regionToCheck,region.value):
+    #                removed = True
+    #                
+    #    return removed
                 
                 
     def doAction(self,action): 
@@ -811,19 +812,19 @@ class Board:
         for regionToCheck in regionTouching:   
                 self.verifyShapes(regionToCheck) #verifies all actions of the adjacent regions -> checks for squares  
         
-        for regionAdjacentValue in region.regionAdjacents:
-            if regionAdjacentValue not in regionTouching:
-                regionAdjacent = self.findRegion(regionAdjacentValue)
-                if regionValue in regionAdjacent.regionAdjacents:
-                    regionAdjacent.regionAdjacents.remove(regionValue) #removes the original region from the regionAdjacent adjacent's
+        #for regionAdjacentValue in region.regionAdjacents:
+        #    if regionAdjacentValue not in regionTouching:
+        #        regionAdjacent = self.findRegion(regionAdjacentValue)
+        #        if regionValue in regionAdjacent.regionAdjacents:
+        #            regionAdjacent.regionAdjacents.remove(regionValue) #removes the original region from the regionAdjacent adjacent's
                  
         check = True 
         while check:
             #if removed, needs to check again for islands
-            removedAdjacents = self.checkRemoveAdjacents() #checks for impossible regions that cant touch eachother
+            #removedAdjacents = self.checkRemoveAdjacents() #checks for impossible regions that cant touch eachother
             removed = self.checkIsland() #checks for islands -> isolated regions 
             overlapped = self.doOverlap() #fills all overlapped cells
-            check = removedAdjacents or removed or overlapped
+            check =  removed or overlapped
     
     def preProcess(self):
         #goes through every region and
@@ -831,10 +832,10 @@ class Board:
         check = True 
         while check:
             #if removed, needs to check again for islands
-            removedAdjacents = self.checkRemoveAdjacents() #2- checks for impossible regions that cant touch eachother
+            #removedAdjacents = self.checkRemoveAdjacents() #2- checks for impossible regions that cant touch eachother
             removedIsland = self.checkIsland() #3- checks for islands -> isolated regions
             overlapped = self.doOverlap() #4- does overlap and #5- removes possibilities from adjacent regions
-            check = removedAdjacents or removedIsland or overlapped #if there were any changes, then we loop
+            check = removedIsland or overlapped #if there were any changes, then we loop
         
                 
     def solve(self):
