@@ -1,7 +1,3 @@
-# nuruomino.py: Template para implementação do projeto de Inteligência Artificial 2024/2025.
-# Devem alterar as classes e funções neste ficheiro de acordo com as instruções do enunciado.\
-# Além das funções e classes sugeridas, podem acrescentar outras que considerem pertinentes.
-
 # Grupo 32:
 # 110181 Duarte Cruz
 # 110239 André Pagaime
@@ -10,126 +6,9 @@ from sys import stdin
 from search import *  # Import the classes from search.py
 import numpy as np
 
-
-LITS = "LITS"
-
- 
-shapeDict=  {  
-                "L":[   
-                        [
-                            [1,0],
-                            [1,"X"],
-                            [1,1]
-                        ],
-                        [
-                            [1,1],
-                            [1,"X"],
-                            [1,0]
-                        ],
-                        [
-                            [0,1],
-                            ["X",1],
-                            [1,1]
-                        ],
-                        [
-                            [1,1],
-                            ["X",1],
-                            [0,1]
-                        ],
-                        [
-                            [1,1,1],
-                            [1,"X",0]
-                        ],
-                        [
-                            [1,1,1],
-                            [0,"X",1]
-                        ],
-                        [
-                            [1,"X",0],
-                            [1,1,1]
-                        ],
-                        [
-                            [0,"X",1],
-                            [1,1,1]
-                        ]
-                    ],
-                "T":[
-                        [
-                            ["X",1,"X"],
-                            [1,1,1]
-                        ],
-                        [
-                            [1,1,1],
-                            ["X",1,"X"]
-                        ],
-                        [
-                            [1,"X"],
-                            [1,1],
-                            [1,"X"]
-                        ],
-                        [
-                            ["X",1],
-                            [1,1],
-                            ["X",1]
-                        ]
-                    ],
-                "S":[
-                        [
-                            [1,"X"],
-                            [1,1],
-                            ["X",1]
-                        ],
-                        [
-                            ["X",1],
-                            [1,1],
-                            [1,"X"]
-                        ],
-                        [
-                            ["X",1,1],
-                            [1,1,"X"]
-                        ],
-                        [
-                            [1,1,"X"],
-                            ["X",1,1]
-                        ]
-                    ],
-                "I":[
-                        [
-                            [1,1,1,1]
-                        ],
-                        [
-                            [1],
-                            [1],
-                            [1],
-                            [1]
-                        ]
-                    ]
-            }
-
-
-
 ####################### Auxiliar Functions #######################
 
-def zigzagOrder(lst: list) -> list:
-    '''
-    [1, 2, 3, 4] -> [1, 4, 2, 3]\n
-    [1, 2, 3, 4, 5, 6, 7] -> [1, 7, 2, 6, 3, 5, 4]
-    '''
-    zigzag_order = []
-    i = 0
-    j = len(lst) - 1
-
-    while i < j:
-        zigzag_order.append(lst[i])
-        zigzag_order.append(lst[j])
-        i += 1
-        j -= 1
-    
-    if i == j: zigzag_order.append(lst[i])
-
-    return zigzag_order
-
-
+#returns true if all elements from the list are the same
 def allEqual(lst: list|tuple) -> bool:
     if not lst: return True
     last_elem = lst[0]
@@ -137,7 +16,7 @@ def allEqual(lst: list|tuple) -> bool:
         if elem != last_elem: return False
     return True
 
-
+#returns the shape based on the directionList
 def whichShape(directions: list[int]) -> str:
     length = len(directions)
     if length == 3 and allEqual(directions): return "I"
@@ -149,301 +28,94 @@ def whichShape(directions: list[int]) -> str:
 
 ##################################################################
 
-
-
-
 #struct Cell
 class Cell:
     def __init__(self, regionValue:int, row:int, col:int):
         self.regionValue = regionValue #region which the cell belongs
         self.row = row #cell's row (x-coordinate)
         self.col = col #cell's column (y-coordinate)
-        self.flagOccupied = False #true if the cell is occupied
-        self.restrictions = set() #all shapes that the cell is touching, so the cell cant be
-        self.shape = ""  #shape contained in the cell
+        self.shape = "" #cell's shape
+        self.flagOccupied = False #true if it is occupied
     
     #used to use this cell but with new reference
     def copy(self) -> 'Cell':
         copied = Cell(self.regionValue, self.row, self.col)
-        copied.flagOccupied = self.flagOccupied
         copied.shape = self.shape
-        copied.restrictions = self.restrictions.copy()
+        copied.flagOccupied = self.flagOccupied
         return copied
     
-    def getRow(self) -> int:
-        return self.row
-    
-    def getRow0(self) -> int:
-        return self.row - 1
-
-    def getCol(self) -> int:
-        return self.col
-    
-    def getCol0(self) -> int:
-        return self.col - 1
-    
-    def getRegionCell(self) -> int:
-        return self.regionValue
-        
-    def occupyCell(self) -> bool:
-        self.flagOccupied = True
-        self.shape = "X"
-        return True
-        
-    def putShapeCell(self, shape:str) -> bool:
-        if self.flagOccupied:return False
-        if shape in self.restrictions: return False
-        self.shape = shape
-        self.flagOccupied = True
-        return True
-        
-    def get_value(self):
+    #returns the cell's shape if it is occupied, otherwise returns the region
+    def get_value(self) -> str:
         if self.flagOccupied:
             #the cell is occupied
             return self.shape
-        return str(self.getRegionCell())
+        return str(self.regionValue)
     
-    def desoccupyCell(self):
-        self.flagOccupied = False
-        self.shape = ""
+    #puts a shape on the cell
+    def putShape(self,shape) -> None:
+        self.shape = shape
+        self.flagOccupied = True
         
-    def addRestriction(self,shape):
-        if self.flagOccupied: return
-        self.restrictions.add(shape)
-        if len(self.restrictions) == 4:
-            #the cell has to be an X
-            self.occupyCell()
-            return 1
-    
-    def overlapped(self,shapesList):
-        before = self.choices
-        for shape in before:
-            if shape not in shapesList:
-                self.choices.remove(shape)
-                self.addRestriction(shape)
-        return self.updateChoices()
-    
-    def updateChoices(self):
-        if len(self.choices) == 1:
-            for shape in self.choices:
-                self.putShapeCell(shape)
-                return 1
-        return 0
-    
-    # Definition of == operator between cells
-    def __eq__(self, other: 'Cell'):
-        if other is None: return False
-        return self.getRow() == other.getRow() and self.getCol() == other.getCol()
-    
     # Make Cell hashable
-    def __hash__(self):
-        return hash((self.getRow(), self.getCol()))
-    
-    def __repr__(self):
-        return f"({self.row}, {self.col})"
-                
+    def __hash__(self) -> int:
+        return hash((self.row, self.col))
 
 #struct Region
 class Region:
     def __init__(self, value:int, cells:list):
         self.value = value #region value
         self.cells = cells #list of cells inside of the region
-        self.numRestrictions = 0 #number of restrictions of the region
-        self.numSquares = len(cells) #number of squares of the region
-        self.flagOccupied = False #only true if it has a shape inside
-    
+        self.possibilities = [] #list of actions that are possible in this region
+        self.isFilled = False #flag for when the region is filled
+        self.canTouch = set() #regions that the region can touch
+        self.adjacentPossibilities = {} #dictionary that is [regionAdjacent] = number of possibilities that touch the region
+        self.isIsland = False
+        
     #used to use this region but with new reference
     def copy(self, copied_cells) -> 'Region':
         copied = Region(self.value, copied_cells)
-        copied.numRestrictions = self.numRestrictions
-        copied.numSquares = self.numSquares
-        copied.flagOccupied = self.flagOccupied
+        copied.possibilities = self.possibilities.copy()
+        copied.isFilled = self.isFilled
+        copied.canTouch = self.canTouch.copy()
+        copied.adjacentPossibilities = self.adjacentPossibilities.copy()
+        copied.isIsland = self.isIsland
         return copied
-        
-    def getValue(self) -> int:
-        return self.value
-    
-    def getCells(self) -> list:
-        return self.cells
-    
-    def updateSquares(self):
-        self.numSquares = 0
-        numShape = 0
-        for cell in self.cells:
-            if cell.shape == "":
-                self.numSquares+=1
-            elif cell.shape != "X":
-                #it is a shape, since it is not X or empty
-                numShape+=1
-                
-        if self.numSquares == 0 or numShape==4:
-            self.flagOccupied = True
-        else:
-            self.flagOccupied = False
-            
-    def updateRestriction(self):
-        self.numRestrictions = 0
-        for cell in self.cells:
-            self.numRestrictions += len(cell.restrictions)
-            
             
     #adds a new cell to the region   
     def addCell(self, newCell:Cell) -> None:
         self.cells.append(newCell) 
-        self.updateSquares()
     
-    def putShape(self,startIndex,shape,shapeForm) -> None:
-        worked = False
-        firstCell = self.cells[startIndex]
-        cellsFromOtherRegions = []
-        cellsOccupied = []
-        cellsWithX = []
-        cellsFilledWithShape = []
-        
-        for i, row in enumerate(shapeForm):
-            for j, val in enumerate(row):
-                if val == 1:
-                    offset_row = i
-                    offset_col = j
-                    break
-            if offset_row is not None:
-                break
-        
-        rowNow = firstCell.getRow() - offset_row
-        beginningCol = firstCell.getCol() - offset_col
-
-        for r in shapeForm:
-            colNow = beginningCol
-            for c in r:
-                if c == 1:
-                    #we want to occupy this cell
-                    cell = self.findCell(rowNow,colNow)
-                    
-                    if cell == None:
-                        return [],cellsOccupied,worked,[],[]
-                    if not cell.putShapeCell(shape):
-                        self.desoccupyCells(cellsOccupied) 
-                        return [],cellsOccupied,worked,[],[]
-                    else:
-                        cellsOccupied.append(cell)
-                        cellsFilledWithShape.append(cell)
-                        self.updateSquares()
-                        
-                elif c == "X":
-                    #this cell is a cross
-                    cell = self.findCell(rowNow,colNow)
-                    if cell == None:
-                        #its from another region
-                        cellsFromOtherRegions.append((rowNow,colNow))
-                    else:    
-                        if not cell.occupyCell():
-                            #the cell was already occupied
-                            self.desoccupyCells(cellsOccupied)
-                            return [],cellsOccupied,worked,[],[]
-                        else:
-                            cellsOccupied.append(cell)
-                            cellsWithX.append(cell)
-                            self.updateSquares()
-                colNow+=1
-            rowNow+=1
-        worked = True
-        self.flagOccupied = True
-        self.numSquares = 0
-        self.numRestrictions = 0
-        return cellsFromOtherRegions,cellsOccupied,worked,cellsFilledWithShape,cellsWithX
-
-    def desoccupyCells(self,cellsOccupied):
-        for cell in cellsOccupied:
-            cell.desoccupyCell()
-            self.updateSquares()
-    
-    def findCell(self,row,col) -> Cell:
-        for cell in self.cells:
-            if cell.getRow() == row and cell.getCol() == col:
-                return cell
-        return None
-    
-    #calculates the score for the priority queue
-    def calculateScore(self) -> int:
-        return self.numSquares - self.numRestrictions*0.25
-
-    def isOccupied(self) -> bool:
-        return self.flagOccupied
-    
-    def getShape(self):
-        #return the shape and shapeForm for the 4 squares regions
-        diffRows = 0
-        rows = []
-        diffCols = 0
-        cols = []
-        perCol = {}
-        perRow = {}
-        for cell in self.cells:
-            row = cell.row
-            col = cell.col
-            if cell.shape == "":
-                if row not in rows:
-                    perRow[row] = 1
-                    rows.append(row)
-                    diffRows += 1
+    #adds a possibility to the region
+    def addPossibility(self,possibility) -> None:
+        #possibility = (shape, cellsOccupied, regionTouching)
+        if not self.isFilled:
+            self.possibilities.append(possibility) #adds possibility
+            for regionAdjacent in possibility[2]:
+                self.canTouch.add(regionAdjacent) #adds regionAdjacent to canTouch and to the dictionary
+                if regionAdjacent in self.adjacentPossibilities:
+                    self.adjacentPossibilities[regionAdjacent]+=1
                 else:
-                    perRow[row] += 1
-                if col not in cols:
-                    perCol[col] = 1
-                    cols.append(col)
-                    diffCols += 1
-                else:
-                    perCol[col] += 1
-                    
-        perRow = dict(sorted(perRow.items()))
-        perCol = dict(sorted(perCol.items()))
-            
-        shape = ""
-        if diffRows==4 or diffCols==4:
-            shape = "I"
-
-        if perRow[max(perRow, key=perRow.get)] == 3 or perCol[max(perCol, key=perCol.get)] == 3:
-            #either a L or T
-            indexRow = list(perRow.keys())[1]
-            indexCol = list(perCol.keys())[1]
-            if perRow[indexRow] == 2 or perCol[indexCol] == 2:
-                #the middle row/col has 2 cells, so it is a T
-                shape = "T"
-            else:
-                shape = "L"
-                
-        if shape == "": shape = "S"
-        
-        shapeForm = self.generate_shapeForm(perRow,perCol)
-        return (shape,shapeForm)
+                    self.adjacentPossibilities[regionAdjacent]= 1
     
-    def generate_shapeForm(self, row_dict, col_dict):
-        # Sort row and column indices for consistent ordering
-        rows = sorted(row_dict.keys())
-        cols = sorted(col_dict.keys())
+    #puts shape on a region and its cells
+    def putShape(self,shapeFinal,coords):
+        if not self.isFilled:
+            finalActions = []
+            for shape,cellsOccupied, regionTouching in self.possibilities:
+                if shape == shapeFinal:
+                    corresponds = True
+                    for coordinate in coords:
+                        if coordinate not in cellsOccupied:
+                           corresponds = False 
+                    if corresponds:
+                        finalActions.append((shape,cellsOccupied,regionTouching))
 
-        # Initialize empty grid with 0s
-        shapeForm = [[0 for _ in cols] for _ in rows]
+            if len(finalActions) == 1:
+                #only one action remains
+                regionTouching = finalActions[0][2]
+                self.isFilled = True
 
-        # Create lists of how many cells need to be filled per column
-        remaining_cols = {c: col_dict[c] for c in cols}
-
-        for i, r in enumerate(rows):
-            # Get number of cells to fill in this row
-            fill = row_dict[r]
-
-            # Sort columns by how many filled cells are still needed (desc)
-            sorted_cols = sorted(cols, key=lambda c: -remaining_cols[c])
-
-            for c in sorted_cols:
-                if fill > 0 and remaining_cols[c] > 0:
-                    j = cols.index(c)
-                    shapeForm[i][j] = 1
-                    fill -= 1
-                    remaining_cols[c] -= 1
-        return shapeForm
-                    
-                         
+            return regionTouching, finalActions
 
 class NuruominoState:
     state_id = 0
@@ -460,12 +132,10 @@ class NuruominoState:
 
 class Board:
     """Representação interna de um tabuleiro do Puzzle Nuruomino."""                       
-    def __init__(self, cellList, size, regionList, priorityQueueScores):
+    def __init__(self, cellList, size, regionList):
         self.cellList = cellList #list of cells (Cell struct)
         self.size = size #size of the board
         self.regionList = regionList #list of regions (Region struct)
-        self.priorityQueueScores = priorityQueueScores  #priority queue of regions to solve -> lowest score means biggest priority
-                                                        #score = number of blocks - number of restrictions
     
     #for creating new states with the same board, but with new references
     def copy(self):
@@ -482,41 +152,29 @@ class Board:
                 newCellList.append(copied_cellList[cell.row-1][cell.col-1])
             newRegion = region.copy(newCellList)
             copied_regionList.append(newRegion)
-        return Board(copied_cellList, self.size, copied_regionList,self.priorityQueueScores.copy())
-        
+        return Board(copied_cellList, self.size, copied_regionList)
+    
+    #adds a list of cells corresponding to a row (cell struct)
     def addLine(self, line:list) -> None:
         "Recebe a lista do board"
-        self.cellList.append(line) #adds a list of cells corresponding to a row (cell struct)
-        
+        self.cellList.append(line)
+    
+    #adds a new region to the list of regions
     def addRegion(self, region:Region) -> None:
-        #adds a new region to the list of regions
         self.regionList.append(region)
     
-    def get_value(self, row:int, col:int) -> int:
+    #returns a cell's value (shape, if occupied. regionValue if not)
+    def get_value(self, row:int, col:int) -> str:
         cell = self.cellList[row-1][col-1]
         return cell.get_value()
 
-    def adjacent_regions(self, regionValue:int) -> list:
-        """Devolve uma lista das regiões que fazem fronteira com a região enviada no argumento."""
-        listAdjacentRegions = []
-        for region in self.regionList:
-            if region.getValue() == regionValue:
-                #found the region
-                for cell in region.getCells():
-                    #goes through every cell in the region and gets all region values of adjacent cells of the current cell
-                    listAdjacentValues = self.adjacent_values(cell.getRow(),cell.getCol()) 
-                    for value in listAdjacentValues:
-                        value = int(value)
-                        #goes through every region value
-                        if value != regionValue and value not in listAdjacentRegions:
-                            #adds the value if it wasnt added before and if it is different than the region that the current cell is in
-                            listAdjacentRegions.append(value)
-                break
-                    
-        return sorted(listAdjacentRegions) #returns it sorted in ascending order [5,2,4,1] -> [1,2,4,5]
+    #returns a cell's region
+    def get_region_cell(self,row,col) -> int:
+        cell = self.cellList[row-1][col-1]
+        return cell.regionValue
     
+    #returns the coordinates of the cell received adjacents (inclunding diagonals)
     def adjacent_positions(self, row:int, col:int) -> list:
-        """Devolve as posições adjacentes à região, em todas as direções, incluindo diagonais."""
         listAdjacentPos = []
         noDiagonals = self.adjacents_positions_without_diagonals(row,col) #all adjacents, without diagonals
         noDiagonalsIndex = 0
@@ -546,23 +204,25 @@ class Board:
                 
         return listAdjacentPos
     
-    def adjacents_positions_without_diagonals(self, row:int, col:int):
+    #returns the coordinates of the cell received adjacents (without diagonals)
+    def adjacents_positions_without_diagonals(self, row:int, col:int) -> list:
         listAdjacentPos = []
         
         if row!=1: #checks if the cell is on the first row
-            listAdjacentPos.append([row-1,col]) #position above
+            listAdjacentPos.append((row-1,col)) #position above
             
         if col!=1: #checks if the cell is on the left side of the board
-                listAdjacentPos.append([row,col-1]) #position on the left
+                listAdjacentPos.append((row,col-1)) #position on the left
                 
         if col!=self.size: #checks if the cell is on the right side of the board
-            listAdjacentPos.append([row,col+1]) #position on the right 
+            listAdjacentPos.append((row,col+1)) #position on the right 
             
         if row!=self.size: #checks if the cell is on the last row
-            listAdjacentPos.append([row+1,col]) #position under
+            listAdjacentPos.append((row+1,col)) #position under
             
         return listAdjacentPos
 
+    #returns the value of the adjacents cells of the cell received (inclunding diagonals)
     def adjacent_values(self, row:int, col:int) -> list:
         """Devolve os valores das celulas adjacentes à região, em todas as direções, incluindo diagonais."""
         listAdjacentValues = []
@@ -574,9 +234,23 @@ class Board:
             listAdjacentValues.append(self.get_value(row,col)) #gets the region value from the adjacent cell
         
         return listAdjacentValues
+    
+    #returns the value of the adjacents cells of the cell received (without diagonals)
+    def adjacent_values_without_diagonals(self, row:int, col:int) -> list:
+        """Devolve os valores das celulas adjacentes à região, em todas as direções, sem diagonais."""
+        listAdjacentValues = []
+        
+        listAdjacentPos = self.adjacents_positions_without_diagonals(row,col) #gets all adjacent position of the cell
+        
+        for row,col in listAdjacentPos:
+            #goes through every adjacent cell
+            listAdjacentValues.append(self.get_value(row,col)) #gets the region value from the adjacent cell
+        
+        return listAdjacentValues
             
     
     @staticmethod
+    #reads the input and creates the board
     def parse_instance():
         """Lê o test do standard input (stdin) que é passado como argumento
         e retorna uma instância da classe Board.
@@ -592,7 +266,7 @@ class Board:
     
         line = stdin.readline().split() #reads the first line
         n = len(line) #gets the board size (NxN)
-        board = Board([],n,[],[]) #creates the board
+        board = Board([],n,[]) #creates the board
         
         firstLineCells = [] #lists of Cells from the first line
         col = 1
@@ -611,7 +285,7 @@ class Board:
                 #region already created
                 for region in board.regionList:
                     #goes through every region already created
-                    if region.getValue() == number:
+                    if region.value == number:
                         #found the region
                         region.addCell(newCell) #adds the cell to the region instance
                         break
@@ -640,16 +314,16 @@ class Board:
                     #region already created
                     for region in board.regionList:
                         #goes through every region already created
-                        if region.getValue() == number:
+                        if region.value == number:
                             #found the region
                             region.addCell(newCell) #adds the cell to the region instance
                             break
                 col+=1
             board.addLine(lineCells) #adds the row to the board instance
-        
-        board.updatePriorityQueue()
+
         return board
     
+    #returns the region that corresponds to the regionValue
     def findRegion(self,regionValue) -> Region:
         for region in self.regionList:
             if region.value == regionValue:
@@ -657,216 +331,64 @@ class Board:
         return None
     
     #prints the board
-    def print(self) -> str:
-        res = ""
+    def print(self) -> None:
+        max = self.size
         for row in self.cellList:
+            r = ""
+            c = 0
             for cell in row:
+                c+=1
                 value = cell.get_value()
                 if value == "X":
-                    res+= f"{cell.regionValue}\t"
+                    value = cell.regionValue
+                    
+                if c != max:
+                    r+= f"{value}\t"
                 else:
-                    res+= f"{value}\t"
-            res += "\n"
-        return res
+                    r+= f"{value}"
+            print(r)     
     
-    def updatePriorityQueue(self):
-        newQueue = []
-        for region in self.regionList:
-            newQueue.append(region.calculateScore())
-        self.priorityQueueScores = newQueue
-        
-    def getRegionBiggestPriority(self):
-        lowestScore = 0
-        index = 0
-        indexNow = 0
-        found = False
-        for priority in self.priorityQueueScores:
-            if priority>0:
-                found = True
-                if(lowestScore == 0 or priority<lowestScore):
-                    lowestScore = priority
-                    index = indexNow
-                elif(lowestScore == priority):
-                    #if there is a tie in the scores, we chose the region with less blocks
-                    regionNow = self.regionList[indexNow]
-                    regionWinning = self.regionList[index]
-                    if(regionNow.numSquares < regionWinning.numSquares):
-                        index = indexNow
-            indexNow+=1
-        if found:return self.regionList[index]
-        else: return False
-        
-    def shapeRegion(self,regionValue,shape,shapeForm,isToInsert):
-        region = self.findRegion(regionValue)
-        if region.isOccupied():
-            return False, [], []
-                    
-        possibleSpots = []
-        startIndex = -1
-        maxIndex = len(region.cells)
-        stop = False
-        cellsWithShape = []
-        cellsWithX = []
-        while startIndex<maxIndex:   
-            worked = False
-            while not worked:
-                #while its empty, it keeps going -> stops when we occupy all 4 cells
-                startIndex+=1   
-                if startIndex == maxIndex:
-                    stop = True 
-                    break  
-                cellsFromOtherRegion,cellsOccupied,worked,cellsFilledWithShape,cellsFilledWithX = region.putShape(startIndex,shape,shapeForm)
-                if not worked: 
-                    self.desocuppyCells(cellsOccupied)
-                
-            if not stop:
-                desocupyFlag = False
-                
-                #checks if there were any squares made, desocupyFlag = True if so
-                desocupyFlag = self.madeSquares(cellsFilledWithShape)
-                
-                if desocupyFlag:
-                    #made a square
-                    self.desocuppyCells(cellsOccupied)
-                else:
-                    #checks if we are going to put an X in a filled cell
-                    for (row,col) in cellsFromOtherRegion:
-                        cell = self.cellList[row-1][col-1]
-                        if not cell.occupyCell():
-                            #the cell was previously occupied
-                            self.desocuppyCells(cellsOccupied)
-                            desocupyFlag = True
-                            break
-                        else:
-                            cellsFilledWithX.append(cell)
-                            cellsOccupied.append(cell)
-                            regionToRemove = self.findRegion(cell.regionValue)
-                            regionToRemove.updateSquares()
-                    
-
-                if not desocupyFlag: 
-                    #we save the spot in a list and clear the cells -> we need to choose the best spot (the one with the best score)
-                    score = len(cellsFromOtherRegion) #the less the better
-                    possibleSpots.append(((startIndex,shape,shapeForm),score))
-                    self.desocuppyCells(cellsOccupied)
-                    for cell in cellsFilledWithShape:
-                        cellsWithShape.append(cell)
-                    for cell in cellsFilledWithX:
-                        cellsWithX.append(cell)
-
-        if isToInsert and len(possibleSpots) > 0:      
-            bestInfo = self.getBestScoreShape(possibleSpots)
-            self.putShapeRegion(bestInfo,region)
-            self.updatePriorityQueue()
-        else:
-            if len(possibleSpots) > 0:
-                return True, cellsWithShape, cellsWithX
-            return False, [], []
-        
-    def madeSquares(self,cellsOccupied):
+    #returns true if the shape received makes a square  
+    def madeSquares(self,cellsOccupied) -> bool:
         max = self.size
-        for cell in cellsOccupied:
-            #we need to check above, under, right and left values
-            row = cell.row
-            col = cell.col 
-            if cell.shape!="X":
-                if row>1:
-                    #we need to check the above position
-                    if self.get_value(row-1,col) in ["L","S","T","I"]:
-                        #the above position is occupied, so now we need to check the left and the right
-                        if col>1:
-                            if self.get_value(row,col-1) in ["L","S","T","I"]:
-                                #the left position is occupied, so now we need to check the top left corner
-                                if self.get_value(row-1,col-1) in ["L","S","T","I"]:
-                                    #it made a square
-                                    return True
-                        if col<max:
-                            if self.get_value(row,col+1) in ["L","S","T","I"]:
-                                #the right position is occupied, so now we need to check the top right corner
-                                if self.get_value(row-1,col+1) in ["L","S","T","I"]:
-                                    #it made a square
-                                    return True
-                if row<max:
-                    #we need to check the under position
-                    if self.get_value(row+1,col) in ["L","S","T","I"]:
-                        #the under position is occupied, so now we need to check the left and the right
-                        if col>1:
-                            if self.get_value(row,col-1) in ["L","S","T","I"]:
-                                #the left position is occupied, so now we need to check the bottom left corner
-                                if self.get_value(row+1,col-1) in ["L","S","T","I"]:
-                                    #it made a square
-                                    return True
-                        if col<max:
-                            if self.get_value(row,col+1) in ["L","S","T","I"]:
-                                #the right position is occupied, so now we need to check the bottom right corner
-                                if self.get_value(row+1,col+1) in ["L","S","T","I"]:
-                                    #it made a square
-                                    return True
+        for row,col in cellsOccupied:
+            #we need to check above, under, right and left values 
+            if row>1:
+                #we need to check the above position
+                if self.get_value(row-1,col) in ["L","S","T","I"] or (row-1,col) in cellsOccupied:
+                    #the above position is occupied, so now we need to check the left and the right
+                    if col>1:
+                        if self.get_value(row,col-1) in ["L","S","T","I"] or (row,col-1) in cellsOccupied:
+                            #the left position is occupied, so now we need to check the top left corner
+                            if self.get_value(row-1,col-1) in ["L","S","T","I"] or (row-1,col-1) in cellsOccupied:
+                                #it made a square
+                                return True
+                    if col<max:
+                        if self.get_value(row,col+1) in ["L","S","T","I"] or (row,col+1) in cellsOccupied:
+                            #the right position is occupied, so now we need to check the top right corner
+                            if self.get_value(row-1,col+1) in ["L","S","T","I"] or (row-1,col+1) in cellsOccupied:
+                                #it made a square
+                                return True
+            if row<max:
+                #we need to check the under position
+                if self.get_value(row+1,col) in ["L","S","T","I"] or (row+1,col) in cellsOccupied:
+                    #the under position is occupied, so now we need to check the left and the right
+                    if col>1:
+                        if self.get_value(row,col-1) in ["L","S","T","I"] or (row,col-1) in cellsOccupied:
+                            #the left position is occupied, so now we need to check the bottom left corner
+                            if self.get_value(row+1,col-1) in ["L","S","T","I"] or (row+1,col-1) in cellsOccupied:
+                                #it made a square
+                                return True
+                    if col<max:
+                        if self.get_value(row,col+1) in ["L","S","T","I"] or (row,col+1) in cellsOccupied:
+                            #the right position is occupied, so now we need to check the bottom right corner
+                            if self.get_value(row+1,col+1) in ["L","S","T","I"] or (row+1,col+1) in cellsOccupied:
+                                #it made a square
+                                return True
         return False   
     
-    def putShapeRegion(self,info,region):
-        startIndex = info[0]
-        shape = info[1]
-        shapeForm = info[2]
-        cellsFromOtherRegion,_,_,cellsFilledWithShape,_ = region.putShape(startIndex,shape,shapeForm)
-        for (row,col) in cellsFromOtherRegion:
-            cell = self.cellList[row-1][col-1]
-            cell.occupyCell()
-            region = self.findRegion(cell.regionValue)
-            region.updateSquares()
-        self.restrictAdjacents(cellsFilledWithShape,shape)
-        
-    def restrictAdjacents(self,cellsOccupied,shape):
-        visited = set()
-        for cell in cellsOccupied:
-            listAdjacentPos = self.adjacents_positions_without_diagonals(cell.row,cell.col)
-            for [row,col] in listAdjacentPos:
-                cell = self.cellList[row-1][col-1]
-                visited.add(cell)
-        
-        for cell in visited:
-            region = self.findRegion(cell.regionValue)
-            if cell.addRestriction(shape) == 1:
-                #the cell is now an X since it has all restrictions
-                region.updateSquares()
-            else:    
-                region.updateRestriction()
-            
-    
-    def getBestScoreShape(self,possibleSpots):
-        #possibleSpots = startIndex,shape,shapeForm,score
-        minScore = possibleSpots[0][1]
-        best = possibleSpots[0][0]
-        for (info,score) in possibleSpots:
-            if score < minScore:
-                minScore = score
-                best = (info)
-        return best
-    
-    def desocuppyCells(self,cellsOccupied):
-        for cell in cellsOccupied:
-            cell.desoccupyCell()
-            region = self.findRegion(cell.regionValue)
-            region.updateSquares()
-       
-    def isCross(self,shapeForm,rowNum,colNum):
-        if shapeForm[rowNum-1][colNum] == 1:
-            if shapeForm[rowNum][colNum+1] == 1:
-                if shapeForm[rowNum-1][colNum+1] == 1:
-                    return True
-            if shapeForm[rowNum][colNum-1] == 1:
-                if shapeForm[rowNum-1][colNum-1] == 1:
-                    return True
-        if shapeForm[rowNum+1][colNum] == 1:
-            if shapeForm[rowNum][colNum+1] == 1:
-                if shapeForm[rowNum+1][colNum+1] == 1:
-                    return True
-            if shapeForm[rowNum][colNum-1] == 1:
-                if shapeForm[rowNum+1][colNum-1] == 1:
-                    return True
-        return False
-    
-    def verifyConnectivity(self):
+    #checks if every region's shape is touching
+    def verifyConnectivity(self) -> bool:
         rows = self.size
         cols = self.size
         
@@ -893,35 +415,10 @@ class Board:
                     
         return len(visitted) == len(self.regionList) * 4
     
-    def doOverlap(self, overlappedCellShape, shapes, overlappedCellX):
-        for cell in overlappedCellShape:
-            #print("shape overlap at",cell.row,cell.col,"with shapes",shapes)
-            region = self.findRegion(cell.regionValue)
-            if cell.overlapped(shapes) == 1:
-                #the cell was filled
-                shape = cell.shape
-                for shapeForm in shapeDict[shape]:
-                    #print("Mandatory overlapped got a shape")
-                    self.shapeRegion(self,cell.regionValue,cell.shape,shapeForm,True)
-            else:
-                for shape in [s for s in ["L", "I", "T", "S"] if s not in shapes]:
-                    if cell.addRestriction(shape) == 1:
-                        #the cell is now an X since it has all restrictions
-                        region.updateSquares()
-                    else:    
-                        region.updateRestriction()
-            
-        for cell in overlappedCellX:
-            #print("X overlap at",cell.row,cell.col)
-            region = self.findRegion(cell.regionValue)
-            cell.occupyCell()
-            region.updateRestriction()
-            
-        self.updatePriorityQueue()
-    
-
-
-    def getAdjacentCells(self, cell: Cell, same_region_only: bool = False, exclude: list[Cell] = None):
+    #returns the cell's adjacent without diagonals
+    #if same_region_only == True: returns the cell's adjacent FROM THE SAME REGION without diagonals  
+    #exclude: returns the cell's adjacent without diagonals and without the cells in exclude
+    def getAdjacentCells(self, cell: Cell, same_region_only: bool = False, exclude: list[Cell] = None) -> list:
         if exclude is None: exclude = []
         adjacent_cells = []
         row_var = -1,  0,  1,  0
@@ -930,18 +427,17 @@ class Board:
 
         # Check up, right, down and left, respectively
         for i in range(len(row_var)):
-            row = cell.getRow0() + row_var[i]
-            col = cell.getCol0() + col_var[i]
+            row = cell.row - 1 + row_var[i]
+            col = cell.col - 1 + col_var[i]
             if row < 0 or col < 0 or row > max or col > max: continue
             new_cell: Cell = self.cellList[row][col]
-            if (not same_region_only or cell.getRegionCell() == new_cell.getRegionCell()) and new_cell not in exclude:
+            if (not same_region_only or cell.regionValue == new_cell.regionValue) and new_cell not in exclude:
                 adjacent_cells.append(new_cell)
 
         return adjacent_cells
     
-
-    def addShape(self, shapes: list, shape: list, directions: list, already_found_shapes: set[frozenset[Cell]]):
-        
+    #adds a shape to the possible shapes of a region
+    def addShape(self, shapes: list, shape: list, directions: list, already_found_shapes: set[frozenset[Cell]]) -> None:
         frozen_shape = frozenset(shape)
         if frozen_shape in already_found_shapes: return
         shape_type = whichShape(directions)
@@ -950,30 +446,22 @@ class Board:
         new_elem = (shape_type, frozen_shape)
         shapes.append(new_elem)
     
-
+    #Returns the direction from cell1 to cell2 if they are adjacent, excluding diagonals. 
     def cellDirection(self, cell1: Cell, cell2: Cell) -> int:
-        '''
-        Returns the direction from cell1 to cell2 if they are adjacent, excluding diagonals.
-
-        Up: 1  
-        Down: -1  
-        Left: 2  
-        Right: -2  
-
-        Returns 0 if the cells are not adjacent.
-        '''
-        row_diff = cell1.getRow0() - cell2.getRow0()
-        col_diff = cell1.getCol0() - cell2.getCol0()
+        #Up: 1  
+        #Down: -1  
+        #Left: 2  
+        #Right: -2  
+        #Returns 0 if the cells are not adjacent.
+        row_diff = cell1.row - cell2.row
+        col_diff = cell1.col - cell2.col
         if abs(row_diff) + abs(col_diff) != 1: return 0 # The cells are not adjacent
         if row_diff: return row_diff
         else: return col_diff * 2
 
-
+    #returns all possible shapes that start on cell
+    #This function does not return all possible shapes that include the cell!
     def getPossibleShapesStartingOnCell(self, cell: Cell, already_found_shapes: set[frozenset[Cell]]) -> list:
-        '''
-        This function does not return all possible shapes that include the cell!
-        '''
-
         # Initialize variables
         stack = []
         shapes = []
@@ -988,17 +476,8 @@ class Board:
         # Search for shapes
         while stack:
 
-            if num_cells == 4 or not stack[-1]:
-                if num_cells == 4: self.addShape(shapes, shape, directions, already_found_shapes)
-                else: stack.pop()
-                if directions: directions.pop()
-                assert current_cell == shape[-1]
-                shape.pop()
-                num_cells -= 1
-                if shape: current_cell = shape[-1]
-
-            elif num_cells == 3 and allEqual(directions) and tuple(shape) not in possible_T_verified: # Try to add T shapes
-                possible_T_verified.add(tuple(shape))
+            if num_cells == 3 and allEqual(directions) and frozenset(shape) not in possible_T_verified: # Try to add T shapes
+                possible_T_verified.add(frozenset(shape))
                 possible_cells = self.getAdjacentCells(shape[-2], same_region_only=True, exclude=shape)
                 for possible_cell in possible_cells:
                     t_directions = directions.copy()
@@ -1007,6 +486,15 @@ class Board:
                     t_shape = shape.copy()
                     t_shape.append(possible_cell)
                     self.addShape(shapes, t_shape, t_directions, already_found_shapes)
+
+            elif num_cells == 4 or not stack[-1]:
+                if num_cells == 4: self.addShape(shapes, shape, directions, already_found_shapes)
+                else: stack.pop()
+                if directions: directions.pop()
+                assert current_cell == shape[-1]
+                shape.pop()
+                num_cells -= 1
+                if shape: current_cell = shape[-1]
 
             else:
                 direction = self.cellDirection(current_cell, stack[-1][-1])
@@ -1020,164 +508,346 @@ class Board:
 
         return shapes
 
-        
-        
+
+    #Returns a list of (shape, cellsWithShape)
     def possibleShapes(self, region: Region) -> list:
-        '''
-        Returns a list of (shape, cellsWithShape)
-        '''
         possible_shapes = []
         already_found_shapes = set()
-        region_cells = region.getCells()
+        region_cells = region.cells
 
         for cell in region_cells:
             possible_shapes.extend(self.getPossibleShapesStartingOnCell(cell, already_found_shapes))
 
         return possible_shapes
     
+    #puts shape on the cell
+    def fillCell(self,row,col,shape) -> None:
+        cell = self.cellList[row-1][col-1]
+        cell.putShape(shape)
+    
+    #adds all possible actions to the region
+    def addActionsToRegions(self,region) -> None:
+        possibleActions = board.possibleShapes(region) 
+        for shape,cellsOccupied in possibleActions:
+            coords = set()
+            for cell in cellsOccupied:
+                coords.add((cell.row,cell.col))
+            adjacentRegions = set()
+            for cell in cellsOccupied:
+                #gets the adjacent regions for the shape
+                adjacentValues = board.adjacent_values_without_diagonals(cell.row,cell.col)
+                for value in adjacentValues:
+                    if value not in ["L","I","T","S"]:
+                        value = int(value)
+                        if value != region.value:
+                            adjacentRegions.add(value)
+            if len(adjacentRegions) == 0:
+                #its impossible for the shape to touch any other shape
+                continue
+            region.addPossibility((shape,coords,adjacentRegions))
+    
+    #does overlaps on region's shape       
+    def doOverlapRegion(self,region) -> tuple:
+        first = True
+        sameShape = True
+        shapeOverlap = ""
+        overlappedCoords = set()
+        possibilities = region.possibilities
+        #possibility = (shape, cellsOccupied, regionTouching)
+        for possibility in possibilities:
+            shape = possibility[0]
+            coords = possibility[1]
+            if first:
+                overlappedCoords = coords
+                first = False
+            else:
+                overlappedCoords = overlappedCoords.intersection(coords)
+            if shapeOverlap == "" and sameShape:
+                #first cell
+                shapeOverlap = shape
+            elif shapeOverlap != shape and sameShape:
+                #found the first different shape
+                sameShape = False
+        
+        if sameShape:
+            return overlappedCoords,shapeOverlap
+        
+        return overlappedCoords,"F"
+    
+    #removes actions that touches the same shape
+    def removeTouching(self,regionToRemove,shapeToRemove,coordsToCheck) -> None:
+        region = self.findRegion(regionToRemove)
+        possibleActions = region.possibilities
+        actionsToRemove = []
+        
+        touching = set() #set of coords that the original shape is touching
+        for row,col in coordsToCheck:
+            touchingPos = self.adjacents_positions_without_diagonals(row,col)
+            for coord in touchingPos:
+                if coord not in coordsToCheck:
+                    touching.add(coord)
+                
+        for possibility in possibleActions:
+            found = False
+            if possibility[0] == shapeToRemove:
+                #need to check if they are touching
+                for coord in possibility[1]:
+                    if coord in touching:
+                        #they are touching -> remove
+                        found = True
+                        break 
+            if found:
+                actionsToRemove.append(possibility)
+        
+        for action in actionsToRemove:     
+            self.removePossibility(action, region)
+    
+    #removes every possibility from region that makes squares   
+    def verifyShapes(self,regionToRemove) -> None:
+        region = self.findRegion(regionToRemove)
+        possibleActions = region.possibilities
+        actionsToRemove = []
+        
+        for action in possibleActions:
+            if self.madeSquares(action[1]):
+                actionsToRemove.append(action)
+                
+        for action in actionsToRemove:     
+            self.removePossibility(action, region)
+        
+    #adds action to every region  
+    def addActions(self) -> None:
+        for region in self.regionList:
+            self.addActionsToRegions(region)
+    
+    #returns the regions that the shape is touching        
+    def getRegionTouching(self,coords,originalRegionValue) -> set:
+        touching = set() #set of regions that the original shape is touching
+        for r,c in coords:
+            touchingPos = self.adjacents_positions_without_diagonals(r,c)
+            for row,col in touchingPos:
+                region = self.get_region_cell(row,col)
+                if region!=originalRegionValue:
+                    touching.add(region)
 
+        return touching
+    
+    #does overlap in every region     
+    def doOverlap(self) -> None:
+        for region in self.regionList:
+            if not region.isFilled:
+                regionTouching = []
+                overlappedCoords, overlappedShape = self.doOverlapRegion(region)
+                if overlappedShape in ["L","I","T","S"]:
+                    #the region has a shape
+                    regionTouching, updatedPossibilities = region.putShape(overlappedShape,overlappedCoords) #puts the shape on region
+                    for possibility in region.possibilities:
+                        if possibility not in updatedPossibilities:
+                            self.removePossibility(possibility, region)
+                    
+                    for regionToRemove in regionTouching:
+                        self.removeTouching(regionToRemove, overlappedShape, overlappedCoords) #verifies all actions of the adjacent regions -> checks for touching with same shape
+                elif len(overlappedCoords)>0:
+                    regionTouching = self.getRegionTouching(overlappedCoords,region.value)
 
+                for row,col in overlappedCoords:
+                    self.fillCell(row,col,overlappedShape)
+
+                for regionToCheck in regionTouching:   
+                    self.verifyShapes(regionToCheck) #verifies all actions of the adjacent regions -> checks for squares
+
+    #removes every possibility that only touches region's that are not in regionToRemove.canTouch
+    def touchingPossibilities(self, regionToRemove) -> None:
+        removePossibilities = []
+        for possibility in regionToRemove.possibilities:
+            if not self.everyRegionIsIsland():
+                remove = True
+                for regionCheck in possibility[2]:
+                    if regionCheck in regionToRemove.canTouch:
+                        remove = False
+                        break
+                    
+                if remove:
+                    removePossibilities.append(possibility)
+        
+        for possibility in removePossibilities:
+            self.removePossibility(possibility, regionToRemove)
+                
+    #removes a possibility from regionToRemove
+    def removePossibility(self,possibility, regionToRemove) -> None:
+        updatedPossibilities = []
+        for checkPossibility in regionToRemove.possibilities:
+            if checkPossibility != possibility:
+                updatedPossibilities.append(checkPossibility)
+        
+        regionToRemove.possibilities = updatedPossibilities
+        
+        for touchingRegionValue in possibility[2]:
+            regionToRemove.adjacentPossibilities[touchingRegionValue] -= 1 
+            if regionToRemove.adjacentPossibilities[touchingRegionValue] == 0:
+                #there are no connections regionToRemove -> touchingRegion
+                #so we can remove every possibility from touchingRegion that only touches regionToRemove
+                touchingRegion = self.findRegion(touchingRegionValue)
+                if touchingRegion.value in regionToRemove.canTouch:
+                    regionToRemove.canTouch.remove(touchingRegion.value) #removes the connection regionToRemove -> touchingRegion
+                if regionToRemove.value in touchingRegion.canTouch:
+                    touchingRegion.canTouch.remove(regionToRemove.value) #removes the connection touchingRegion -> regionToRemove
+                self.touchingPossibilities(touchingRegion)
+                if self.isIsland(touchingRegion):
+                    #touchingRegion is an island
+                    self.dealIsland(touchingRegion)
+                    
+        if self.isIsland(regionToRemove):
+            #this region became an island
+            self.dealIsland(regionToRemove)
+                    
+    #returns true if every region except one is an island
+    def everyRegionIsIsland(self) -> bool:
+        nonIsland = 0
+        for region in self.regionList:
+            if not region.isIsland:
+                nonIsland += 1
+        return nonIsland == 1
+    
+    #transforms a region into a bridge
+    def becomeBridge(self, bridgeRegion, islandRegionValue) -> None:
+        if islandRegionValue in bridgeRegion.canTouch:
+            bridgeRegion.canTouch.remove(islandRegionValue) #removes the connection bridge -> island
+            
+        removePossibilities = []
+        for possibility in bridgeRegion.possibilities:
+            #removes every possibility that is not in touch with islandRegion or that only touches in islandRegion
+            touchingRegions = possibility[2]
+            if islandRegionValue not in touchingRegions:
+                #this possibility doesn't touch the islandRegion
+                removePossibilities.append(possibility)
+                
+            elif not self.everyRegionIsIsland():
+                remove = True
+                for regionCheck in touchingRegions:
+                    if regionCheck in bridgeRegion.canTouch:
+                        remove = False
+                        break
+                
+                if remove:
+                    removePossibilities.append(possibility)
+                
+        for possibility in removePossibilities:
+            self.removePossibility(possibility, bridgeRegion)
+            
+        if self.isIsland(bridgeRegion):
+            self.dealIsland(bridgeRegion)
+    
+    #does the treatment of an island region (makes its only adjacent a bridge)
+    def dealIsland(self,islandRegion) -> None:
+        islandRegion.isIsland = True
+        bridgeRegion = self.findRegion(list(islandRegion.canTouch)[0])
+        self.becomeBridge(bridgeRegion, islandRegion.value) #transforms the only adjacent region into a bridge
+    
+    #returns true if the region is an island
+    def isIsland(self,region) -> bool:
+        if region.isIsland:
+            #already checked
+            return False
+        return len(region.canTouch) == 1
+    
+    #deals with all islands on the board
+    def checkIslands(self) -> None:
+        for region in self.regionList:
+            if self.isIsland(region):
+                #this region is an island
+                self.dealIsland(region)
+                
+    #does the pre process
+    def preProcess(self) -> None:
+        #1 -> adds every action possible to each region
+        self.addActions()
+        #2 -> checks for islands
+        self.checkIslands()
+        #3 -> does overlaps
+        self.doOverlap()
+        
+        
+    #chooses the region with the less possibilities and returns the possibilities        
+    def solve(self) -> list:
+        minPossibilities = 0
+        regionToSolve = None
+        first = True
+        touching = 0
+        
+        for region in self.regionList:
+            if not region.isFilled:
+                numPossibilities = len(region.possibilities)
+                numTouching = len(region.canTouch)
+                if first:
+                    minPossibilities = numPossibilities
+                    regionToSolve = region
+                    touching = numTouching
+                    first = False
+                else:
+                    if (numPossibilities < minPossibilities) or (numPossibilities == minPossibilities and numTouching > touching):
+                        touching = numTouching
+                        minPossibilities = numPossibilities
+                        regionToSolve = region 
+        if first:
+            #no possibilities in any region
+            return []
+        return regionToSolve.possibilities
+    
+    #does an action 
+    def doAction(self,action) -> None: 
+        #possibility = (shape, cellsOccupied, regionTouching)
+        shape = action[0]
+        cellsOccupied = action[1]
+        
+        coords = list(cellsOccupied)[0]
+        
+        row,col = coords
+        regionValue = self.get_region_cell(row,col)
+        region = self.findRegion(regionValue)
+        
+        _ , updatedPossibilities = region.putShape(shape,cellsOccupied) #puts the shape on region
+        
+        for possibility in region.possibilities:
+            if possibility not in updatedPossibilities:
+                self.removePossibility(possibility, region) #removes the possibilities that are now impossible
+        
+        regionTouching = action[2]
+        for regionToRemove in regionTouching:
+            self.removeTouching(regionToRemove, shape, cellsOccupied) #verifies all actions of the adjacent regions -> checks for touching with same shape
+            
+        for row,col in cellsOccupied:
+            self.fillCell(row,col,shape) #fills the cells
+        
+        for regionToCheck in regionTouching:   
+                self.verifyShapes(regionToCheck) #verifies all actions of the adjacent regions -> checks for squares  
+        
+        for regionAdjacentValue in region.canTouch:
+            if regionAdjacentValue not in regionTouching:
+                regionAdjacent = self.findRegion(regionAdjacentValue)
+                self.touchingPossibilities(regionAdjacent) #removes all possibilities from adjacents that only touched the original region
+            
+            
 
 class Nuruomino(Problem):
     def __init__(self, board: Board):
         """O construtor especifica o estado inicial."""
         self.initial = NuruominoState(board)
-        
-    def fillAuto(self,state: NuruominoState):
-        board = state.board
-        for region in board.regionList:
-            if region.numSquares == 4:
-                #we can simply put the supposed piece, since it is a 4 piece region
-                (shape,shapeForm) = region.getShape()
-                crosses = self.findCrosses(shapeForm)
-                if(crosses):
-                    for (r,c) in crosses:
-                        shapeForm[r][c] = "X"
-                board.shapeRegion(region.value,shape,shapeForm,True)
-                #print("fill region",region.value,shape,shapeForm)
-                
-    def findCrosses(self,shapeForm):
-        crossesIndexes = []
-        rowNum = 0
-        for row in shapeForm:
-            colNum = 0
-            for value in row:
-                if value == 0:
-                    #we need to check above, under, right and left values
-                    if rowNum!=0:
-                        if shapeForm[rowNum-1][colNum] == 1:
-                            if colNum!=len(row)-1:
-                                if shapeForm[rowNum][colNum+1] == 1:
-                                    if shapeForm[rowNum-1][colNum+1] == 1: #topRightCorner
-                                        crossesIndexes.append((rowNum,colNum))
-                            if colNum!=0:
-                                if shapeForm[rowNum][colNum-1] == 1:
-                                    if shapeForm[rowNum-1][colNum-1] == 1: #topLeftCorner
-                                        crossesIndexes.append((rowNum,colNum))
-                    if rowNum!=len(shapeForm)-1:
-                        if shapeForm[rowNum+1][colNum] == 1:
-                            if colNum!=len(row)-1:
-                                if shapeForm[rowNum][colNum+1] == 1:
-                                    if shapeForm[rowNum+1][colNum+1] == 1:
-                                        crossesIndexes.append((rowNum,colNum))#bottomRightCorner
-                            if colNum!=0:            
-                                if shapeForm[rowNum][colNum-1] == 1:
-                                    if shapeForm[rowNum+1][colNum-1] == 1:
-                                        crossesIndexes.append((rowNum,colNum))#bottomLeftCorner
-                colNum += 1
-            rowNum += 1
-        return crossesIndexes
 
     def actions(self, state: NuruominoState):
-        """Retorna uma lista de ações que podem ser executadas a
-        partir do estado passado como argumento."""
+        """Retorna a lista de ações da região com menos possibilidades"""
+        
         board = state.board
-        listActions = []
-        region = board.getRegionBiggestPriority()
-        if isinstance(region,bool):
-            #the regions are all filled
-            return []
-    
-        overlappedCellsShape = []
-        overlappedCellsX = []
-        cellsShapeOverlap = []
-        if region.numSquares == -1:
-            #we can simply put the supposed piece, since it is a 4 piece region
-            action = region.getShape() #action = (shape,shapeForm)
-            crosses = self.findCrosses(action[1])
-            if(crosses):
-                    for (r,c) in crosses:
-                        action[1][r][c] = "X"
-            listActions.append((region.value,action))
-        else:
-            #print("for region",region.value)
-            #the region has more than 4 squares, so we need to test each shape and shapeForm
-            for region in board.regionList:
-                print("\n\n", region.getValue(), "\n")
-                a = board.possibleShapes(region)
-                for b in a:
-                    print(b)
-                    print("\n")
-                print("\n")
-            
-            #firstFlag = True
-            #for shape in shapeDict:
-            #    for shapeForm in shapeDict[shape]:
-            #        worked, cellsWithShape, cellsWithX = board.shapeRegion(region.value,shape,[row[:] for row in shapeForm],False)  
-            #        if worked:
-            #            listActions.append((region.value,(shape,shapeForm)))
-            #            if firstFlag:
-            #                firstFlag = False
-            #                overlappedCellsShape = cellsWithShape
-            #                overlappedCellsX = cellsWithX
-            #                for cell in overlappedCellsShape:
-            #                   if shape not in cellsShapeOverlap:
-            #                        cellsShapeOverlap.append(shape)
-            #            else:
-            #                #check for overlaps in shaped  cells
-            #                overlappedCellsShape = [cell for cell in overlappedCellsShape if cell in cellsWithShape]
-            #                for cell in overlappedCellsShape:
-            #                    if shape not in cellsShapeOverlap:
-            #                        cellsShapeOverlap.append(shape)
-            #                        
-            #                #check for overlap in X cells
-            #                overlappedCellsX = [cell for cell in overlappedCellsX if cell in cellsWithX]
-                                    
-        #print("found shape overlap at:")   
-        #for cell in overlappedCellsShape:
-        #    print(cell.row,cell.col, "with shapes", cellsShapeOverlap)
-        #print("found X overlap at:")   
-        #for cell in overlappedCellsX:
-        #    print(cell.row,cell.col)
-        return listActions       
+        return board.solve()    
 
     def result(self, state: NuruominoState, action):
         """Retorna o estado resultante de executar a 'action' sobre
         'state' passado como argumento. A ação a executar deve ser uma
         das presentes na lista obtida pela execução de
         self.actions(state)."""
-        listActions = self.actions(state) #listActions = [(regionValue,(shape,shapeForm))]
-        
-        if len(action) == 2:
-            #action -> (regionValue, (shape, form of shape))
-            regionValue = action[0]
-            shape = action[1][0]
-            shapeForm = action[1][1]
-        else:
-            #action -> (regionValue, shape, form of shape)
-            regionValue = action[0]
-            shape = action[1]
-            shapeForm = action[2]
-            
-        newState = NuruominoState(state.board.copy()) #copies the board, but with new reference
-        if (regionValue,(shape,shapeForm)) in listActions:
-            #the action is in listActions, so we do it
-            newState.board.shapeRegion(regionValue,shape,shapeForm,True)
-            print(newState.board.print())
-            return newState
-        else:
-            #the action is not in listActions, so it is not a possible action
-            return state
+        board = state.board.copy()
+        board.doAction(action)
+        return NuruominoState(board)
         
 
     def goal_test(self, state: NuruominoState):
@@ -1186,7 +856,7 @@ class Nuruomino(Problem):
         estão preenchidas de acordo com as regras do problema."""
         #checks if every region is occupied 
         for region in state.board.regionList:
-            if not region.isOccupied():
+            if not region.isFilled:
                 return False
             
         #checks if every shape is touching
@@ -1194,27 +864,26 @@ class Nuruomino(Problem):
 
     def h(self, node: Node):
         """Função heuristica utilizada para a procura A*."""
-        #region = board.getRegionBiggestPriority()
-        #print(" ".join([str(i) for i in board.priorityQueueScores]))
-        
-        #if region.numSquares == 4:
-        #    #we can simply put the supposed piece
-        #    #print("4 piece region -> fill automatically")
-        #    #(shape,shapeForm) = region.getShape()
-        #    # board.shapeRegion(region.value,shape,shapeForm,True)
-        #    pass
         # TODO
         pass
-    
+
+import time, os
     
 if __name__ == "__main__":
+    start = time.time()
     board = Board.parse_instance()
     problem = Nuruomino(board)
-    problem.fillAuto(problem.initial)
-    solution_node = depth_limited_search(problem)
-    if isinstance(solution_node,str):
+    board.preProcess() #does the pre process
+    
+    solution_node = depth_first_tree_search(problem)
+    if isinstance(solution_node,str) or solution_node == None:
         print("No solution found")
     else:
         #found solution
         solution_state = solution_node.state
-        print(solution_state.board.print())
+        solution_state.board.print()
+    end = time.time()
+    final = end - start
+    
+    # Fazedor de Excel
+    
