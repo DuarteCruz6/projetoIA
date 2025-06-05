@@ -923,6 +923,9 @@ with open("../timesSearches.csv", "a") as f:
         first_iter = True
         line = search + ','
         for file in files:
+            if file == "test05.txt":
+                line += ","
+                continue
             print(f"\nA TESTAR: {file} com a {search}")
             start = time.time()
             board_str = testBoard(path, file)
