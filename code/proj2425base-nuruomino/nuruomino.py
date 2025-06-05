@@ -689,12 +689,12 @@ class Board:
                 #so we can remove every possibility from touchingRegion that only touches regionToRemove
                 touchingRegion = self.findRegion(touchingRegionValue)
                 if touchingRegion.value in regionToRemove.canTouch:
-                    regionToRemove.canTouch.remove(touchingRegion.value) #removes the connection
+                    regionToRemove.canTouch.remove(touchingRegion.value) #removes the connection regionToRemove -> touchingRegion
                 if regionToRemove.value in touchingRegion.canTouch:
-                    touchingRegion.canTouch.remove(regionToRemove.value) #removes the connection
+                    touchingRegion.canTouch.remove(regionToRemove.value) #removes the connection touchingRegion -> regionToRemove
                 self.touchingPossibilities(touchingRegion)
                 if self.isIsland(touchingRegion):
-                    #this region is an island
+                    #touchingRegion is an island
                     self.dealIsland(touchingRegion)
                     
         if self.isIsland(regionToRemove):
@@ -862,10 +862,10 @@ class Nuruomino(Problem):
         # TODO
         pass
 
-import time
+#import time
     
 if __name__ == "__main__":
-    start = time.time()
+    #start = time.time()
     board = Board.parse_instance()
     problem = Nuruomino(board)
     board.preProcess() #does the pre process
@@ -877,6 +877,6 @@ if __name__ == "__main__":
         #found solution
         solution_state = solution_node.state
         solution_state.board.print()
-    end = time.time()
-    print(end-start)
+    #end = time.time()
+    #print(end-start)
 
