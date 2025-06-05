@@ -527,7 +527,7 @@ class Board:
     
     #adds all possible actions to the region
     def addActionsToRegions(self,region) -> None:
-        possibleActions = board.possibleShapes(region) 
+        possibleActions = self.possibleShapes(region) 
         for shape,cellsOccupied in possibleActions:
             coords = set()
             for cell in cellsOccupied:
@@ -535,7 +535,7 @@ class Board:
             adjacentRegions = set()
             for cell in cellsOccupied:
                 #gets the adjacent regions for the shape
-                adjacentValues = board.adjacent_values_without_diagonals(cell.row,cell.col)
+                adjacentValues = self.adjacent_values_without_diagonals(cell.row,cell.col)
                 for value in adjacentValues:
                     if value not in ["L","I","T","S"]:
                         value = int(value)
@@ -864,26 +864,75 @@ class Nuruomino(Problem):
 
     def h(self, node: Node):
         """Função heuristica utilizada para a procura A*."""
-        # TODO
-        pass
+        total = 0
+        board = node.state.board
+        for region in board.regionList:
+            if not region.isFilled:
+                num_possibilities = len(region.getPossibilities())
+                if num_possibilities == 0:
+                    #reached a dead end
+                    return float('inf')
+                total += (num_possibilities - 1)
+        return total
 
-import time, os
-    
-if __name__ == "__main__":
-    start = time.time()
+
+
+######################## PARA FAZER O EXCEL ########################
+
+import time, os, io, __main__
+
+searches = {
+    "DFS Tree": depth_first_tree_search,
+    "DFS Graph": depth_first_graph_search,
+    "BFS Tree": breadth_first_tree_search,
+    "BFS Graph": breadth_first_graph_search,
+    "Uniform Cost": uniform_cost_search,
+    "Greedy": greedy_search,
+    "A*": astar_search
+}
+
+
+def solveNuruomino(search) -> bool:
     board = Board.parse_instance()
     problem = Nuruomino(board)
     board.preProcess() #does the pre process
     
-    solution_node = depth_first_tree_search(problem)
+    solution_node = search(problem)
     if isinstance(solution_node,str) or solution_node == None:
         print("No solution found")
+        return False
     else:
         #found solution
         solution_state = solution_node.state
         solution_state.board.print()
-    end = time.time()
-    final = end - start
-    
-    # Fazedor de Excel
-    
+        return True
+        
+
+def testBoard(path: str, file: str) -> str:
+    with open(f"{path}/{file}", "r") as f: return f.read()
+        
+
+# Get test files
+path = "../sample-nuruominoboards"
+files = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))] # Get files
+files = [f for f in files if f.endswith(".txt") and not f.endswith(".out.txt")] # Filter out the ones that are not the initial board
+files.sort()
+
+with open("../timesSearches.csv", "a") as f:
+    for search in searches:
+        first_iter = True
+        line = search + ','
+        for file in files:
+            print(f"\nA TESTAR: {file} com a {search}")
+            start = time.time()
+            board_str = testBoard(path, file)
+            __main__.stdin = io.StringIO(board_str)
+            if solveNuruomino(searches[search]):
+                end = time.time()
+                elapsed = end - start
+                print("Tempo: ", elapsed , "s", sep="")
+                line += f"{str(round(elapsed, 3))},"
+            else: line += "-,"
+        line = line.rstrip(",")
+        line += "\n"
+        f.write(line)
