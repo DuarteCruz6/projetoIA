@@ -8,17 +8,16 @@ import numpy as np
 
 ####################### Auxiliar Functions #######################
 
+#returns true if all elements from the list are the same
 def allEqual(lst: list|tuple) -> bool:
-    #returns true if all elements from the list are the same
     if not lst: return True
     last_elem = lst[0]
     for elem in lst:
         if elem != last_elem: return False
     return True
 
-
+#returns the shape based on the directionList
 def whichShape(directions: list[int]) -> str:
-    #returns the shape based on the directionList
     length = len(directions)
     if length == 3 and allEqual(directions): return "I"
     elif length == 3 and directions[0] == directions[-1]: return "S"
@@ -96,7 +95,7 @@ class Region:
                 if regionAdjacent in self.adjacentPossibilities:
                     self.adjacentPossibilities[regionAdjacent]+=1
                 else:
-                    self.adjacentPossibilities[regionAdjacent] =1
+                    self.adjacentPossibilities[regionAdjacent]= 1
     
     #puts shape on a region and its cells
     def putShape(self,shapeFinal,coords):
@@ -173,25 +172,6 @@ class Board:
     def get_region_cell(self,row,col) -> int:
         cell = self.cellList[row-1][col-1]
         return cell.regionValue
-    
-    #returns a list of regions adjacent to the region received
-    def adjacent_regions(self, regionValue:int) -> list:
-        listAdjacentRegions = []
-        for region in self.regionList:
-            if region.value == regionValue:
-                #found the region
-                for cell in region.cells:
-                    #goes through every cell in the region and gets all region values of adjacent cells of the current cell
-                    listAdjacentValues = self.adjacent_values(cell.row,cell.col) 
-                    for value in listAdjacentValues:
-                        value = int(value)
-                        #goes through every region value
-                        if value != regionValue and value not in listAdjacentRegions:
-                            #adds the value if it wasnt added before and if it is different than the region that the current cell is in
-                            listAdjacentRegions.append(value)
-                break
-                    
-        return sorted(listAdjacentRegions) #returns it sorted in ascending order [5,2,4,1] -> [1,2,4,5]
     
     #returns the coordinates of the cell received adjacents (inclunding diagonals)
     def adjacent_positions(self, row:int, col:int) -> list:
@@ -467,12 +447,12 @@ class Board:
         shapes.append(new_elem)
     
     #Returns the direction from cell1 to cell2 if they are adjacent, excluding diagonals. 
-    #Up: 1  
-    #Down: -1  
-    #Left: 2  
-    #Right: -2  
-    #Returns 0 if the cells are not adjacent.
     def cellDirection(self, cell1: Cell, cell2: Cell) -> int:
+        #Up: 1  
+        #Down: -1  
+        #Left: 2  
+        #Right: -2  
+        #Returns 0 if the cells are not adjacent.
         row_diff = cell1.row - cell2.row
         col_diff = cell1.col - cell2.col
         if abs(row_diff) + abs(col_diff) != 1: return 0 # The cells are not adjacent
