@@ -7,6 +7,7 @@ searches = {
     "DFS Graph": depth_first_graph_search,
     "BFS Tree": breadth_first_tree_search,
     "BFS Graph": breadth_first_graph_search,
+    "Bidirectional": bidirectional_search,
     "Uniform Cost": uniform_cost_search,
     "Greedy": greedy_search,
     "A*": astar_search

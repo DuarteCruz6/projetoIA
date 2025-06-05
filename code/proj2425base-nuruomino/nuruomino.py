@@ -863,7 +863,6 @@ class Nuruomino(Problem):
         return state.board.verifyConnectivity()
 
     def h(self, node: Node):
-        """Função heuristica utilizada para a procura A*."""
         total = 0
         board = node.state.board
         for region in board.regionList:
@@ -875,8 +874,6 @@ class Nuruomino(Problem):
                 total += (num_possibilities - 1)
         return total
 
-
-
 ######################## PARA FAZER O EXCEL ########################
 
 import time, os, io, __main__
@@ -884,6 +881,7 @@ import time, os, io, __main__
 searches = {
     "DFS Tree": depth_first_tree_search,
     "DFS Graph": depth_first_graph_search,
+    "Iterative DFS": iterative_deepening_search,
     "BFS Tree": breadth_first_tree_search,
     "BFS Graph": breadth_first_graph_search,
     "Uniform Cost": uniform_cost_search,
