@@ -868,7 +868,7 @@ class Nuruomino(Problem):
         board = node.state.board
         for region in board.regionList:
             if not region.isFilled:
-                num_possibilities = len(region.getPossibilities())
+                num_possibilities = len(region.possibilities)
                 if num_possibilities == 0:
                     #reached a dead end
                     return float('inf')
