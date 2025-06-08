@@ -1,11 +1,4 @@
-# Grupo 32:
-# 110181 Duarte Cruz
-# 110239 André Pagaime
-
-from sys import stdin
 from search import *  # Import the classes from search.py
-import numpy as np
-from scanner import *  
 
 ####################### Auxiliar Functions #######################
 

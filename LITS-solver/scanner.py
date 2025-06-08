@@ -1,9 +1,6 @@
-from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-import time
-from clicker import BOARDSIZE
+
+BOARDSIZE = None
 
 #returns the elements in a list
 def getCellsSite(driver):
@@ -89,7 +86,9 @@ def createTable(matrixElements):
             
     return table
 
-def getMatrix(driver):
+def getMatrix(boardsize, driver):
+    global BOARDSIZE
+    BOARDSIZE = boardsize
     cells = getCellsSite(driver)
     matrixElements = createMatrix(cells)
     return matrixElements
