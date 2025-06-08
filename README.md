@@ -6,7 +6,7 @@ O projeto consiste em fazer um programa em Python que resolve instâncias de tab
 
 ### RESOLUCAO E RELATÓRIO
 
-Aqui está o nosso [relatório com a explicação da nossa solução] (https://youtu.be/5Kd0njYzOeU)
+Aqui está o nosso [relatório com a explicação da nossa solução](https://youtu.be/5Kd0njYzOeU)
 
 ### RESULTADOS
 
@@ -33,5 +33,5 @@ Aqui está o nosso [relatório com a explicação da nossa solução] (https://y
 | Testes|11/15     | 
 | Vídeo |   TBA    | 
 
-[^1]: Vídeo com [explicação] acerca deste puzzle (https://www.youtube.com/watch?v=q3mspJmENnQ&feature=youtu.be)
+[^1]: Vídeo com [explicação](https://www.youtube.com/watch?v=q3mspJmENnQ&feature=youtu.be) acerca deste puzzle
 [^2]: P - Test Passed; T - Time Limit Exceeded; S - Space Limit Exceeded; F - Test Failed
