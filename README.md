@@ -6,7 +6,7 @@ O projeto consiste em fazer um programa em Python que resolve instâncias de tab
 
 ### RESOLUCAO E RELATÓRIO
 
-Aqui está o nosso [relatório com a explicação da nossa solução](https://youtu.be/5Kd0njYzOeU)
+Aqui está o nosso [relatório com a explicação da nossa solução](https://youtu.be/5Kd0njYzOeU).
 
 ### RESULTADOS
 
