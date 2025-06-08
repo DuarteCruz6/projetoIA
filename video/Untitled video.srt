@@ -1,0 +1,427 @@
+1
+00:00:00,187 --> 00:00:00,938
+Olá, sou o Duarte Cruz. Sou o André Pagaime
+
+2
+00:00:00,764 --> 00:00:02,801
+do Grupo 32, e neste
+
+3
+00:00:02,801 --> 00:00:03,937
+vídeo, vamos explicar o nosso projeto
+
+4
+00:00:03,937 --> 00:00:05,106
+para a cadeira de Inteligência Artificial.
+
+5
+00:00:05,250 --> 00:00:07,096
+Nuruomino é um jogo que consiste em
+
+6
+00:00:07,096 --> 00:00:08,881
+preencher com tetraminos uma grelha
+
+7
+00:00:08,881 --> 00:00:10,666
+quadrada dividida em regiões, seguindo
+
+8
+00:00:10,666 --> 00:00:11,681
+algumas regras, tais como:
+
+9
+00:00:12,131 --> 00:00:13,777
+Cada região tem apenas um tetramino.
+
+10
+00:00:13,930 --> 00:00:15,629
+Não pode haver tetraminos quadrados, nem
+
+11
+00:00:15,629 --> 00:00:17,063
+pode haver quadrados formados pela junção
+
+12
+00:00:17,063 --> 00:00:17,696
+de tetraminos.
+
+13
+00:00:18,020 --> 00:00:19,520
+Dois tetraminos iguais não podem ser
+
+14
+00:00:19,520 --> 00:00:20,835
+ortogonalmente adjacentes.
+
+15
+00:00:20,965 --> 00:00:21,965
+Todas as regiões têm de estar
+
+16
+00:00:21,965 --> 00:00:23,498
+ortogonalmente ligadas, formando um único
+
+17
+00:00:23,498 --> 00:00:23,865
+polinómio.
+
+18
+00:00:24,138 --> 00:00:25,984
+O objetivo deste projeto é desenvolver um
+
+19
+00:00:25,984 --> 00:00:27,676
+programa em Python que, dado um
+
+20
+00:00:27,676 --> 00:00:29,522
+tabuleiro, retorna a sua solução única,
+
+21
+00:00:29,614 --> 00:00:30,876
+utilizando técnicas de procura.
+
+22
+00:00:30,969 --> 00:00:32,302
+Deste modo, a nossa abordagem para este
+
+23
+00:00:32,302 --> 00:00:33,636
+problema é guardar todas as possíveis
+
+24
+00:00:33,636 --> 00:00:35,302
+ações dentro de cada região, tendo como
+
+25
+00:00:35,302 --> 00:00:36,602
+objetivo restringir ao máximo o número de
+
+26
+00:00:36,602 --> 00:00:38,002
+possibilidades até se atingir a solução.
+
+27
+00:00:38,202 --> 00:00:39,936
+Isto é, eliminar o maior número de ações
+
+28
+00:00:39,936 --> 00:00:41,202
+antes de se realizar uma procura.
+
+29
+00:00:41,645 --> 00:00:43,152
+Uma ação no contexto deste problema é
+
+30
+00:00:43,152 --> 00:00:44,721
+colocar uma peça numa região, de forma a
+
+31
+00:00:44,721 --> 00:00:46,537
+preenchê-la, de maneira a restringir ao
+
+32
+00:00:46,537 --> 00:00:48,783
+máximo as regiões adjacentes para que os
+
+33
+00:00:48,783 --> 00:00:50,198
+ramos de procura sejam minimizados.
+
+34
+00:00:50,398 --> 00:00:51,732
+Deste modo, tivemos de realizar um pré
+
+35
+00:00:51,732 --> 00:00:52,965
+processamento da tabuleiro recebido no
+
+36
+00:00:52,965 --> 00:00:54,398
+input, em que se analisa todas as ações
+
+37
+00:00:54,398 --> 00:00:55,898
+possíveis em cada região, eliminando
+
+38
+00:00:55,898 --> 00:00:57,065
+precocemente as que não tocavam em
+
+39
+00:00:57,065 --> 00:00:57,831
+nenhuma região adjacente.
+
+40
+00:00:57,952 --> 00:00:59,890
+Para isso, recorremos a uma procura DFS
+
+41
+00:00:59,890 --> 00:01:01,183
+aplicada a cada célula da região.
+
+42
+00:01:01,583 --> 00:01:02,916
+Além disso, o pré-processamento constrói um
+
+43
+00:01:02,916 --> 00:01:05,182
+grafo bi-direcional com peso, cujos nós
+
+44
+00:01:05,182 --> 00:01:06,916
+são as regiões e cada região está ligada
+
+45
+00:01:06,916 --> 00:01:08,916
+às suas adjacentes. O peso da conexão
+
+46
+00:01:08,916 --> 00:01:10,582
+região A -> região B corresponde ao número
+
+47
+00:01:10,582 --> 00:01:12,216
+de ações da região A cujos tetraminos
+
+48
+00:01:12,216 --> 00:01:12,949
+tocam na região B.
+
+49
+00:01:13,678 --> 00:01:15,185
+Deste modo, o pré-processamento verifica
+
+50
+00:01:15,185 --> 00:01:17,032
+se há alguma região que apenas tem uma
+
+51
+00:01:17,032 --> 00:01:19,001
+região adjacente. Em caso afirmativo,
+
+52
+00:01:19,001 --> 00:01:20,878
+significa que ambas as regiões têm
+
+53
+00:01:20,878 --> 00:01:21,924
+obrigatoriamente de se tocar.
+
+54
+00:01:22,098 --> 00:01:23,544
+Além disso, o pré processamento realiza
+
+55
+00:01:23,544 --> 00:01:25,421
+ainda um overlap das acções possíveis de
+
+56
+00:01:25,421 --> 00:01:27,205
+cada região, verificando se há quadrados
+
+57
+00:01:27,205 --> 00:01:28,651
+comuns a todas, preenchendo-os.
+
+58
+00:01:28,940 --> 00:01:30,373
+O overlap pode ser resultado de ações com
+
+59
+00:01:30,373 --> 00:01:31,573
+diferentes tetraminos ou então com o mesmo
+
+60
+00:01:31,573 --> 00:01:33,673
+tetramino. Caso seja com o mesmo tetramino,
+
+61
+00:01:34,006 --> 00:01:35,740
+então removemos das regiões adjacentes
+
+62
+00:01:35,740 --> 00:01:37,040
+todas as possibilidades que contêm tetraminos
+
+63
+00:01:37,040 --> 00:01:38,773
+iguais e que os tornavam ortogonalmente
+
+64
+00:01:38,773 --> 00:01:40,639
+adjacentes. Elimina-se ainda todas as
+
+65
+00:01:40,639 --> 00:01:41,939
+possibilidades das regiões adjacentes,
+
+66
+00:01:41,939 --> 00:01:43,473
+que, em conjunto com os quadrados
+
+67
+00:01:43,473 --> 00:01:45,206
+preenchidos da região original, fariam um
+
+68
+00:01:45,206 --> 00:01:47,406
+quadrado 2 por 2, aplicando se o Forward Checking
+
+69
+00:01:47,406 --> 00:01:48,973
+e o AC-3 para atualizar o domínio.
+
+70
+00:01:49,561 --> 00:01:51,195
+Após o pré processamento, se ainda existirem
+
+71
+00:01:51,195 --> 00:01:52,695
+regiões com várias ações possíveis, o
+
+72
+00:01:52,695 --> 00:01:53,861
+nosso programa recorre ao algoritmo de
+
+73
+00:01:53,861 --> 00:01:56,595
+procura DFS tree search para explorar as opções.
+
+74
+00:01:56,781 --> 00:01:58,473
+No processamento o programa selecciona a
+
+75
+00:01:58,473 --> 00:01:59,981
+região com menor número de possibilidades
+
+76
+00:01:59,981 --> 00:02:02,596
+para desenvolver, aplicando o MRV e, em
+
+77
+00:02:02,596 --> 00:02:04,288
+caso de empate, escolhe a região com mais
+
+78
+00:02:04,288 --> 00:02:06,073
+adjacentes, de forma a introduzir mais
+
+79
+00:02:06,073 --> 00:02:07,611
+restrições no problema, para assim,
+
+80
+00:02:07,611 --> 00:02:08,996
+reduzir a profundidade da árvore de
+
+81
+00:02:08,996 --> 00:02:10,888
+procura. O nó atual é desenvolvido o mais
+
+82
+00:02:10,888 --> 00:02:12,755
+profundamente possível e, caso chegue a
+
+83
+00:02:12,755 --> 00:02:13,855
+um estado completamente preenchido que
+
+84
+00:02:13,855 --> 00:02:15,454
+não responde a uma solução, é feito Back
+
+85
+00:02:15,454 --> 00:02:17,188
+Tracking. Se for encontrada uma região
+
+86
+00:02:17,188 --> 00:02:18,788
+ainda por preencher, o programa expande
+
+87
+00:02:18,788 --> 00:02:20,021
+todas as possibilidades dessa região.
+
+88
+00:02:20,072 --> 00:02:21,439
+A cada possibilidade removida, tanto no
+
+89
+00:02:21,439 --> 00:02:22,406
+pré processamento como durante o
+
+90
+00:02:22,406 --> 00:02:23,972
+processamento, caso se tenha removido a
+
+91
+00:02:23,972 --> 00:02:25,005
+última possibilidade de uma região que
+
+92
+00:02:25,005 --> 00:02:26,905
+tocava numa adjacente, então remove se do
+
+93
+00:02:26,905 --> 00:02:28,972
+grafo as conexões, região -> região
+
+94
+00:02:28,972 --> 00:02:30,639
+adjacente e região adjacente -> região.
+
+95
+00:02:30,933 --> 00:02:32,102
+Tal como referido anteriormente, o
+
+96
+00:02:32,102 --> 00:02:34,040
+algoritmo de procura utilizado foi a DFS
+
+97
+00:02:34,040 --> 00:02:35,610
+tree search, já que após comparar os tempos
+
+98
+00:02:35,610 --> 00:02:37,363
+de procura, foi a que teve menor média.
+
+99
+00:02:37,485 --> 00:02:39,085
+Para isto, construímos este gráfico em
+
+100
+00:02:39,085 --> 00:02:40,777
+que se observa que é este o algoritmo com
+
+101
+00:02:40,777 --> 00:02:42,407
+menor tempo médio de procura da solução.
+
+102
+00:02:42,690 --> 00:02:44,157
+Por fim, foi desenvolvido um script capaz de
+
+103
+00:02:44,157 --> 00:02:45,357
+resolver automaticamente puzzles
+
+104
+00:02:45,357 --> 00:02:46,590
+disponibilizados no site referido no
+
+105
+00:02:46,590 --> 00:02:48,223
+enunciado, com o objectivo de demonstrar,
+
+106
+00:02:48,223 --> 00:02:50,023
+de forma prática, a eficácia da solução
+
+107
+00:02:50,023 --> 00:02:50,556
+implementada.

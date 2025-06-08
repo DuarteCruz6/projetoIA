@@ -688,6 +688,7 @@ class Board:
                 
     #removes a possibility from regionToRemove
     def removePossibility(self, possibility, regionToRemove) -> None:
+        #possibility = (shape, cellsOccupied, regionTouching, cellsAdjacentOtherRegion)
         updatedPossibilities = []
         for checkPossibility in regionToRemove.possibilities:
             if checkPossibility != possibility:
@@ -728,9 +729,9 @@ class Board:
             disconnectRegions.add(r.value)
         
         adjacentsToCheck = regionToCheck.canTouchRegions.copy()
+        possibilitiesToRemove = []
         for regionAdjacentValue in adjacentsToCheck:
                 regionAdjacent = self.findRegion(regionAdjacentValue)
-                possibilitiesToRemove = []
                 for possibility in regionAdjacent.possibilities:
                     #possibility = (shape, cellsOccupied, regionTouching, cellsAdjacentOtherRegion)
                     cellsOccupied = possibility[1]
@@ -743,7 +744,7 @@ class Board:
                     if not touch:
                         #the original region doesnt touch this possibility
                         if not self.everyRegionIsIsland():
-                        #not every region is island
+                            #not every region is island
                             regionTouching = possibility[2]
                             remove = True
                             for region in regionTouching:
@@ -753,15 +754,15 @@ class Board:
                                     break
                             if remove:
                                 #this shape doesnt touch any valid region
-                                possibilitiesToRemove.append(possibility)
+                                possibilitiesToRemove.append((possibility,regionAdjacent))
                        
                     else:
                         #we dont remove this possibility
                         if regionAdjacentValue in disconnectRegions:
                             disconnectRegions.remove(regionAdjacentValue)
-
-                for possibility in possibilitiesToRemove:
-                    self.removePossibility(possibility,regionAdjacent)
+                            
+        for possibility,regionAdjacent in possibilitiesToRemove:
+            self.removePossibility(possibility,regionAdjacent)
                     
         for regionToRemoveValue in disconnectRegions:
             regionToRemove = self.findRegion(regionToRemoveValue)
@@ -772,6 +773,7 @@ class Board:
             if self.isIsland(regionToRemove):
                 #this region became an island
                 self.dealIsland(regionToRemove)
+                
                             
                     
     #returns true if every region except one is an island
