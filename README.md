@@ -10,7 +10,7 @@ Aqui está o nosso [relatório com a explicação da nossa solução] (https://y
 
 ### RESULTADOS
 
-| Teste | Resultado |
+| Teste | Resultado[^2] |
 |:-----:|:---------:|
 | 1     | P         |
 | 2     | P         |
@@ -30,7 +30,8 @@ Aqui está o nosso [relatório com a explicação da nossa solução] (https://y
 
 | Coisa | Resultado|
 | :----:| :-----:  |
-| Testes|13/15     | 
+| Testes|11/15     | 
 | Vídeo |   TBA    | 
 
 [^1]: Vídeo com [explicação] acerca deste puzzle (https://www.youtube.com/watch?v=q3mspJmENnQ&feature=youtu.be)
+[^2]: P - Test Passed; T - Time Limit Exceeded; S - Space Limit Exceeded; F - Test Failed
