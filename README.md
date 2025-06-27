@@ -31,7 +31,7 @@ Aqui está o nosso [relatório com a explicação da nossa solução](https://yo
 | Coisa | Resultado|
 | :----:| :-----:  |
 | Testes|11/15     | 
-| Vídeo |   TBA    | 
+| Vídeo |   4.25/5    | 
 
 [^1]: Vídeo com [explicação](https://www.youtube.com/watch?v=q3mspJmENnQ&feature=youtu.be) acerca deste puzzle
 [^2]: P - Test Passed; T - Time Limit Exceeded; S - Space Limit Exceeded; F - Test Failed
